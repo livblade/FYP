@@ -1,0 +1,67 @@
+<!-- Person 1: Responsible for platform-wide dashboard landing view. -->
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-4">
+  <div class="row g-3">
+    <div class="col-12 col-md-6 col-xl-3"><div class="card metric-card"><div class="card-body"><h2 class="h6">Total Revenue (SGD)</h2><p id="metricRevenue" class="display-6">0.00</p></div></div></div>
+    <div class="col-12 col-md-6 col-xl-3"><div class="card metric-card"><div class="card-body"><h2 class="h6">Total Transactions</h2><p id="metricTransactions" class="display-6">0</p></div></div></div>
+    <div class="col-12 col-md-6 col-xl-3"><div class="card metric-card"><div class="card-body"><h2 class="h6">Pending Payments</h2><p id="metricPending" class="display-6">0</p></div></div></div>
+    <div class="col-12 col-md-6 col-xl-3"><div class="card metric-card"><div class="card-body"><h2 class="h6">Settlements</h2><p id="metricSettlements" class="display-6">0</p></div></div></div>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2 mt-3">
+    <a href="/invoices/new" class="btn btn-primary btn-sm">Create Invoice</a>
+    <a href="/invoices" class="btn btn-outline-light btn-sm">View All Invoices</a>
+    <a href="/settlements" class="btn btn-outline-light btn-sm">View Settlements</a>
+    <a href="/merchants/profile" class="btn btn-outline-light btn-sm">Profile Settings</a>
+  </div>
+
+  <div class="card mt-4 shadow-sm">
+    <div class="card-body">
+      <h3 class="h5">Recent Activity</h3>
+      <div class="table-responsive">
+        <table class="table table-striped align-middle" id="recentInvoiceTable">
+          <thead>
+            <tr>
+              <th>Invoice</th>
+              <th>Amount (SGD)</th>
+              <th>Invoice Status</th>
+              <th>Payment Status</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5" class="text-muted">Loading dashboard metrics...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-12 col-xl-8">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h3 class="h6">Revenue Trend (Last 7 records)</h3>
+          <div style="height: 280px;">
+            <canvas id="revenueChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-xl-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h3 class="h6">Invoice Status Distribution</h3>
+          <div style="height: 280px;">
+            <canvas id="statusChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="/js/dashboard.js"></script>
+
+<%- include('../partials/footer') %>

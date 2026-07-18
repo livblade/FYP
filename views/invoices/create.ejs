@@ -1,0 +1,53 @@
+<!-- Person 3: Responsible for invoice creation views. -->
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h1 class="h4">Create Invoice</h1>
+          <% if (error) { %>
+            <div class="alert alert-danger"><%= error %></div>
+          <% } %>
+          <form action="/invoices" method="post" class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Customer Name (Optional)</label>
+              <input type="text" name="customer_name" class="form-control" placeholder="Jane Doe" />
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Customer Email (Optional)</label>
+              <input type="email" name="customer_email" class="form-control" placeholder="customer@example.com" />
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Amount (SGD)</label>
+              <input type="number" name="amount_sgd" step="0.000001" class="form-control" placeholder="100.000000" required />
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Accepted Token</label>
+              <select name="accepted_token" class="form-select">
+                <option value="ETH">ETH</option>
+                <option value="USDC">USDC</option>
+                <option value="USDT">USDT</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Expiry (minutes)</label>
+              <input type="number" name="expiry_minutes" class="form-control" value="15" min="1" max="1440" required />
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description (Optional)</label>
+              <textarea name="description" class="form-control" rows="3" placeholder="What is this invoice for?"></textarea>
+            </div>
+            <div class="col-12">
+              <button class="btn btn-primary" type="submit">Generate Invoice</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

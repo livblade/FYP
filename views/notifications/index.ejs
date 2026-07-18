@@ -1,0 +1,29 @@
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h1 class="h4 mb-3">Notifications</h1>
+      <div class="list-group">
+        <% if (!notifications || notifications.length === 0) { %>
+          <div class="list-group-item text-muted">No notifications yet.</div>
+        <% } %>
+
+        <% (notifications || []).forEach((item) => { %>
+          <div class="list-group-item d-flex justify-content-between align-items-start">
+            <div>
+              <div class="fw-semibold"><%= item.title %></div>
+              <div class="text-muted"><%= item.message %></div>
+            </div>
+            <span class="badge bg-<%= item.level === 'success' ? 'success' : item.level === 'warning' ? 'warning text-dark' : 'secondary' %>">
+              <%= item.type %>
+            </span>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

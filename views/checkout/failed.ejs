@@ -1,0 +1,14 @@
+<!-- Person 3: Responsible for checkout failure states and recovery views. -->
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-5 text-center">
+  <div class="alert alert-danger shadow-sm mx-auto" style="max-width: 680px;">
+    <h1 class="h4">Payment Failed</h1>
+    <p class="mb-3">Transaction could not be completed. Please retry or contact support.</p>
+    <a href="javascript:history.back()" class="btn btn-danger me-2">Try Again</a>
+    <a href="/dashboard" class="btn btn-outline-dark">Go to Dashboard</a>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

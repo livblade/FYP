@@ -1,0 +1,13 @@
+<!-- Person 3: Responsible for checkout completion views. -->
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-5 text-center">
+  <div class="alert alert-success shadow-sm mx-auto" style="max-width: 680px;">
+    <h1 class="h4">Payment Success</h1>
+    <p class="mb-3">Your transaction has been submitted and is being confirmed on-chain.</p>
+    <a href="/dashboard" class="btn btn-success">Back to Dashboard</a>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,25 @@
+<!-- Person 4: Responsible for settlement detail views and audit summaries. -->
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-4">
+  <% if (!settlement) { %>
+    <div class="alert alert-warning">Settlement not found.</div>
+  <% } else { %>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h1 class="h4">Settlement Detail</h1>
+      <p>Reference: <strong><%= settlement.settlement_reference %></strong></p>
+      <p>Status: <span class="badge bg-secondary"><%= settlement.status %></span></p>
+      <p>Payment ID: <strong><%= settlement.payment_id %></strong></p>
+      <p>Gross amount: SGD <strong><%= Number(settlement.gross_amount_sgd).toFixed(2) %></strong></p>
+      <p>Platform fee: SGD <strong><%= Number(settlement.platform_fee_sgd).toFixed(2) %></strong></p>
+      <p>Conversion fee: SGD <strong><%= Number(settlement.conversion_fee_sgd).toFixed(2) %></strong></p>
+      <p>Net amount: SGD <strong><%= Number(settlement.net_amount_sgd).toFixed(2) %></strong></p>
+      <p>Created at: <strong><%= new Date(settlement.created_at).toLocaleString() %></strong></p>
+    </div>
+  </div>
+  <% } %>
+</main>
+
+<%- include('../partials/footer') %>

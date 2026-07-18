@@ -1,0 +1,22 @@
+<!-- Person 2: Responsible for merchant dashboard views. -->
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-4">
+  <div class="row g-3">
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card metric-card"><div class="card-body"><h3 class="h6">Total Invoices</h3><p class="display-6"><%= stats ? stats.totalInvoices : 0 %></p></div></div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card metric-card"><div class="card-body"><h3 class="h6">Paid</h3><p class="display-6"><%= stats ? stats.paidInvoices : 0 %></p></div></div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card metric-card"><div class="card-body"><h3 class="h6">Pending</h3><p class="display-6"><%= stats ? stats.pendingInvoices : 0 %></p></div></div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card metric-card"><div class="card-body"><h3 class="h6">Settled (SGD)</h3><p class="display-6">$<%= stats ? Number(stats.settledSgd).toFixed(2) : '0.00' %></p></div></div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

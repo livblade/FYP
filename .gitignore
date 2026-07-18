@@ -1,0 +1,13 @@
+# Person 1: Responsible for repository hygiene.
+node_modules/
+.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+coverage/
+dist/
+.DS_Store
+Thumbs.db
+*.log
+blockchain/cache/
+blockchain/artifacts/

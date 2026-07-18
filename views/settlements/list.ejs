@@ -1,0 +1,40 @@
+<!-- Person 4: Responsible for settlement list and reconciliation views. -->
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h1 class="h4">Settlements</h1>
+      <form action="/settlements" method="post" class="row g-2 mb-3">
+        <div class="col-auto">
+          <input class="form-control form-control-sm" type="number" name="payment_id" placeholder="Payment ID" required />
+        </div>
+        <div class="col-auto">
+          <button class="btn btn-primary btn-sm" type="submit">Create Settlement</button>
+        </div>
+      </form>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead><tr><th>Reference</th><th>Payment ID</th><th>Gross (SGD)</th><th>Net (SGD)</th><th>Status</th></tr></thead>
+          <tbody>
+            <% if (!settlements || settlements.length === 0) { %>
+              <tr><td colspan="5" class="text-center text-muted py-4">No settlements available.</td></tr>
+            <% } %>
+            <% (settlements || []).forEach((settlement) => { %>
+              <tr>
+                <td><a href="/settlements/<%= settlement.settlement_reference %>"><%= settlement.settlement_reference %></a></td>
+                <td><%= settlement.payment_id %></td>
+                <td><%= Number(settlement.gross_amount_sgd).toFixed(2) %></td>
+                <td><%= Number(settlement.net_amount_sgd).toFixed(2) %></td>
+                <td><span class="badge bg-secondary"><%= settlement.status %></span></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

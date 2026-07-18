@@ -1,0 +1,245 @@
+/* Person 1: Responsible for shared styling system and responsive UI tokens. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --color-primary: #f0b90b;
+  --color-secondary: #8b93a7;
+  --color-success: #0ecb81;
+  --color-danger: #f6465d;
+  --color-warning: #f0b90b;
+  --color-info: #1e80ff;
+  --color-surface: #1e2329;
+  --color-surface-2: #151a20;
+  --color-bg: #0b0e11;
+  --color-text: #eaecef;
+  --color-muted: #a5afbf;
+  --shadow-soft: 0 8px 20px rgba(0, 0, 0, 0.35);
+  --border-soft: #2b3139;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: radial-gradient(circle at top right, #1a2a4a 0%, #0b0e11 55%);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.app-navbar {
+  background: linear-gradient(90deg, #0a1628 0%, #1a2a4a 50%, #2a4a7f 100%);
+  border-bottom: 1px solid rgba(240, 185, 11, 0.18);
+}
+
+.app-footer {
+  background: #0a0d12;
+  color: #aeb7c6;
+  border-top: 1px solid var(--border-soft);
+}
+
+.landing-wrap {
+  max-width: 1400px;
+}
+
+.hero-panel {
+  border-radius: 1rem;
+  background: linear-gradient(130deg, rgba(10, 22, 40, 0.96), rgba(26, 42, 74, 0.9));
+  color: #f2f5fb;
+  border: 1px solid rgba(240, 185, 11, 0.28);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+}
+
+.glass-card {
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(240, 185, 11, 0.2);
+}
+
+.feature-card {
+  border: 1px solid rgba(240, 185, 11, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: linear-gradient(180deg, #1f252c 0%, #191d23 100%);
+}
+
+.feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.2);
+}
+
+.stat-mini {
+  border-radius: 0.75rem;
+  padding: 0.8rem;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.stat-mini small {
+  display: block;
+  opacity: 0.8;
+}
+
+.stat-mini strong {
+  font-size: 1.1rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #f0b90b, #ff9f1a);
+  border-color: #d99f02;
+  color: #111316;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  filter: brightness(0.98);
+  color: #111316;
+}
+
+.card {
+  border: 1px solid var(--border-soft);
+  border-radius: 0.85rem;
+  box-shadow: var(--shadow-soft);
+  background: linear-gradient(180deg, #1f252c 0%, #191d23 100%);
+}
+
+.metric-card .display-6 {
+  font-weight: 700;
+}
+
+.metric-card {
+  border: 1px solid rgba(240, 185, 11, 0.12);
+}
+
+.form-control,
+.form-select {
+  border-radius: 0.65rem;
+  border: 1px solid #3a424d;
+  color: var(--color-text);
+  background: #12161c;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 0.2rem rgba(240, 185, 11, 0.15);
+  background: #12161c;
+  color: var(--color-text);
+}
+
+.form-control::placeholder {
+  color: #778094;
+}
+
+.table {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.table {
+  --bs-table-bg: var(--color-surface);
+  --bs-table-color: var(--color-text);
+  --bs-table-striped-bg: #252b33;
+  --bs-table-hover-bg: #2b323c;
+}
+
+#checkoutSteps .list-group-item.active {
+  background: rgba(14, 203, 129, 0.18);
+  color: inherit;
+  border-color: rgba(14, 203, 129, 0.35);
+}
+
+.dropdown-menu {
+  background: #1f242b;
+  border-color: #2f3741;
+}
+
+.dropdown-item,
+.dropdown-item-text {
+  color: #dfe5ef;
+}
+
+.dropdown-item:hover {
+  background: #2a313a;
+}
+
+.text-secondary,
+.text-muted {
+  color: var(--color-muted) !important;
+}
+
+.btn-outline-light {
+  border-color: #5f6a7c;
+  color: #dfe5ef;
+}
+
+.btn-outline-light:hover {
+  background: #dfe5ef;
+  color: #111316;
+}
+
+.alert {
+  border-radius: 0.75rem;
+}
+
+.status-badge {
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-detected,
+.status-verifying,
+.status-confirming {
+  background: rgba(13, 202, 240, 0.15);
+  color: #055160;
+}
+
+.status-confirmed {
+  background: rgba(25, 135, 84, 0.18);
+  color: #0f5132;
+}
+
+.status-failed,
+.status-rejected,
+.status-underpaid,
+.status-overpaid,
+.status-duplicate {
+  background: rgba(220, 53, 69, 0.15);
+  color: #842029;
+}
+
+.countdown-box {
+  display: inline-block;
+  padding: 0.6rem 1rem;
+  border-radius: 0.6rem;
+  background: rgba(240, 185, 11, 0.15);
+  color: #ffd677;
+  font-weight: 600;
+  border: 1px solid rgba(240, 185, 11, 0.32);
+}
+
+.loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid #dbe6ff;
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .metric-card .display-6 {
+    font-size: 1.8rem;
+  }
+
+  .hero-panel h1 {
+    font-size: 2rem;
+  }
+}

@@ -1,0 +1,60 @@
+<%- include('./partials/header', { title: title }) %>
+<%- include('./partials/navbar') %>
+
+<main class="container-fluid py-5 landing-wrap">
+  <section class="hero-panel p-4 p-lg-5 mb-4">
+    <div class="row align-items-center g-4">
+      <div class="col-12 col-lg-7">
+        <span class="badge text-bg-warning mb-2">Crypto Settlement Platform</span>
+        <h1 class="display-5 fw-bold mb-3">Accept crypto, settle in fiat, and track every transaction in real time.</h1>
+        <p class="lead text-secondary mb-4">
+          Built for modern merchants: invoice issuance, wallet payments, automated verification, and transparent settlement analytics.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="/auth/register" class="btn btn-primary btn-lg">Get Started</a>
+          <a href="/auth/login" class="btn btn-outline-light btn-lg">Merchant Login</a>
+        </div>
+      </div>
+      <div class="col-12 col-lg-5">
+        <div class="card glass-card p-3">
+          <h2 class="h6 mb-3">Live Platform Snapshot</h2>
+          <div class="row g-2">
+            <div class="col-6"><div class="stat-mini"><small>Transactions</small><strong>12,842</strong></div></div>
+            <div class="col-6"><div class="stat-mini"><small>Merchants</small><strong>317</strong></div></div>
+            <div class="col-6"><div class="stat-mini"><small>Volume (SGD)</small><strong>4.8M</strong></div></div>
+            <div class="col-6"><div class="stat-mini"><small>Uptime</small><strong>99.99%</strong></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="row g-3">
+    <div class="col-12 col-md-4">
+      <div class="card h-100 feature-card">
+        <div class="card-body">
+          <h3 class="h5">Accept Payments</h3>
+          <p class="mb-0 text-secondary">Create invoices in seconds and let customers pay with ETH, USDC, or USDT.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card h-100 feature-card">
+        <div class="card-body">
+          <h3 class="h5">Auto-Settlement</h3>
+          <p class="mb-0 text-secondary">Configure fee rules and settlement currency with full audit visibility.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card h-100 feature-card">
+        <div class="card-body">
+          <h3 class="h5">Real-Time Tracking</h3>
+          <p class="mb-0 text-secondary">Monitor payment states, confirmations, and settlement outcomes from a single dashboard.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<%- include('./partials/footer') %>

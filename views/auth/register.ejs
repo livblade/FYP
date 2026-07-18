@@ -1,0 +1,57 @@
+<!-- Person 1: Responsible for auth UI scaffolding. -->
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-6">
+      <div class="card shadow-sm glass-card">
+        <div class="card-body p-4">
+          <h1 class="h4 mb-3">Register Merchant Account</h1>
+          <% if (error) { %>
+            <div class="alert alert-danger" role="alert"><%= error %></div>
+          <% } %>
+          <% if (success) { %>
+            <div class="alert alert-success" role="alert"><%= success %></div>
+          <% } %>
+          <form action="/auth/register" method="post">
+            <div class="mb-3">
+              <label class="form-label">Full Name</label>
+              <input type="text" name="fullName" class="form-control" placeholder="Your Name" required minlength="2" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Business Name</label>
+              <input type="text" name="businessName" class="form-control" placeholder="Business Pte Ltd" required minlength="2" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Registration Number (Optional)</label>
+              <input type="text" name="registration_number" class="form-control" placeholder="2026XXXXXX" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" class="form-control" placeholder="merchant@example.com" required />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input id="registerPassword" type="password" name="password" class="form-control" placeholder="********" minlength="8" required />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Confirm Password</label>
+              <input id="confirmPassword" type="password" class="form-control" placeholder="********" minlength="8" required data-match="registerPassword" />
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="termsCheck" required />
+              <label class="form-check-label" for="termsCheck">I agree to the Terms & Conditions</label>
+            </div>
+            <button class="btn btn-primary w-100" type="submit">Create Account</button>
+          </form>
+          <div class="text-center mt-3">
+            <a href="/auth/login" class="btn btn-outline-secondary w-100">Back to Log In</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

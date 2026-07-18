@@ -1,0 +1,35 @@
+<!-- Person 3: Responsible for checkout payment UX and MetaMask interaction views. -->
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm" id="checkoutCard" data-invoice-public-id="<%= invoice.public_id %>">
+        <div class="card-body">
+          <h1 class="h4">Pay Invoice</h1>
+          <p>Invoice: <strong><%= invoice.public_id %></strong></p>
+          <p>Merchant: <strong><%= invoice.merchant ? invoice.merchant.business_name : 'Unknown Merchant' %></strong></p>
+          <p>Amount due: <strong><%= invoice.required_crypto_amount || 'TBD' %> <%= invoice.accepted_token %></strong> (SGD <%= Number(invoice.amount_sgd).toFixed(2) %>)</p>
+          <div class="countdown-box mb-3">Time left: <strong id="checkoutCountdown" data-expiry="<%= new Date(invoice.expires_at).toISOString() %>">--:--</strong></div>
+
+          <ol class="list-group list-group-numbered mb-3" id="checkoutSteps">
+            <li class="list-group-item" data-step="connect">Connect Wallet</li>
+            <li class="list-group-item" data-step="intent">Create Payment Intent</li>
+            <li class="list-group-item" data-step="submitted">Transaction Submitted</li>
+            <li class="list-group-item" data-step="verify">Verifying</li>
+            <li class="list-group-item" data-step="complete">Completed</li>
+          </ol>
+
+          <button id="connectWalletBtn" class="btn btn-primary me-2">Connect MetaMask</button>
+          <button id="payNowBtn" class="btn btn-success">Pay Now</button>
+          <div id="checkoutStatus" class="alert alert-secondary mt-3 mb-0" role="status">Awaiting wallet connection.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="/js/metamask.js"></script>
+<script src="/js/checkout.js"></script>
+
+<%- include('../partials/footer') %>

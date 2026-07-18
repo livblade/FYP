@@ -1,0 +1,97 @@
+<!-- Person 2: Responsible for merchant profile views. -->
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-4">
+  <% if (error) { %>
+    <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+  <% if (success) { %>
+    <div class="alert alert-success"><%= success %></div>
+  <% } %>
+  <div class="row g-3">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h1 class="h4">Merchant Profile</h1>
+          <form action="/merchants/profile" method="post">
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label">Business Name</label>
+                <input class="form-control" name="business_name" value="<%= merchant ? merchant.business_name : '' %>" placeholder="Business Pte Ltd" required />
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Registration No.</label>
+                <input class="form-control" name="registration_number" value="<%= merchant ? (merchant.registration_number || '') : '' %>" placeholder="2026XXXXXX" />
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Business Email</label>
+                <input class="form-control" type="email" name="business_email" value="<%= merchant ? (merchant.business_email || '') : '' %>" placeholder="merchant@business.com" />
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Business Phone</label>
+                <input class="form-control" name="business_phone" value="<%= merchant ? (merchant.business_phone || '') : '' %>" placeholder="+65 XXXX XXXX" />
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Settlement Currency</label>
+                <select class="form-select" name="settlement_currency">
+                  <option value="SGD" <%= merchant && merchant.settlement_currency === 'SGD' ? 'selected' : '' %>>SGD</option>
+                  <option value="USD" <%= merchant && merchant.settlement_currency === 'USD' ? 'selected' : '' %>>USD</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Business Address</label>
+                <textarea class="form-control" name="business_address" rows="3" placeholder="Address"><%= merchant ? (merchant.business_address || '') : '' %></textarea>
+              </div>
+            </div>
+            <button class="btn btn-primary mt-3" type="submit">Save Changes</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h6">Wallets</h2>
+          <form action="/merchants/wallets" method="post" class="row g-2 mb-3">
+            <div class="col-12">
+              <input class="form-control form-control-sm" name="wallet_address" placeholder="0x..." required />
+            </div>
+            <div class="col-6">
+              <select class="form-select form-select-sm" name="wallet_type">
+                <option value="ETH">ETH</option>
+                <option value="USDC">USDC</option>
+                <option value="USDT">USDT</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <input class="form-control form-control-sm" name="network" value="SEPOLIA" />
+            </div>
+            <div class="col-12">
+              <button class="btn btn-primary btn-sm w-100" type="submit">Add Wallet</button>
+            </div>
+          </form>
+
+          <ul class="list-group">
+            <% if (!wallets || wallets.length === 0) { %>
+              <li class="list-group-item text-muted">No wallets added.</li>
+            <% } %>
+            <% (wallets || []).forEach((wallet) => { %>
+              <li class="list-group-item d-flex justify-content-between align-items-start">
+                <div>
+                  <div><%= wallet.wallet_address %></div>
+                  <small class="text-muted"><%= wallet.wallet_type %> on <%= wallet.network %> <%= wallet.is_default ? '(Default)' : '' %></small>
+                </div>
+                <form action="/merchants/wallets/<%= wallet.wallet_id %>/delete" method="post">
+                  <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+                </form>
+              </li>
+            <% }) %>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

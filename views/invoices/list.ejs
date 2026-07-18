@@ -1,0 +1,63 @@
+<!-- Person 3: Responsible for invoice listing views. -->
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0">Invoices</h1>
+        <div class="d-flex gap-2">
+          <button id="exportInvoiceCsvBtn" class="btn btn-outline-secondary btn-sm" type="button">Export CSV</button>
+          <a href="/invoices/new" class="btn btn-primary btn-sm">Create Invoice</a>
+        </div>
+      </div>
+
+      <div class="row g-2 mb-3">
+        <div class="col-12 col-md-6">
+          <input id="invoiceSearchInput" class="form-control form-control-sm" placeholder="Search by invoice id, customer, status" />
+        </div>
+        <div class="col-12 col-md-6 d-flex flex-wrap gap-2">
+          <button class="btn btn-outline-dark btn-sm invoice-filter-btn active" data-filter="ALL" type="button">All</button>
+          <button class="btn btn-outline-dark btn-sm invoice-filter-btn" data-filter="PAID" type="button">Paid</button>
+          <button class="btn btn-outline-dark btn-sm invoice-filter-btn" data-filter="AWAITING_PAYMENT" type="button">Pending</button>
+          <button class="btn btn-outline-dark btn-sm invoice-filter-btn" data-filter="EXPIRED" type="button">Expired</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-striped align-middle" id="invoiceTable">
+          <thead>
+            <tr><th>Invoice ID</th><th>Amount (SGD)</th><th>Status</th><th>Created</th><th>Action</th></tr>
+          </thead>
+          <tbody id="invoiceTableBody">
+            <% if (!invoices || invoices.length === 0) { %>
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">No invoices yet.</td>
+              </tr>
+            <% } %>
+            <% (invoices || []).forEach((invoice) => { %>
+              <tr data-status="<%= invoice.status %>">
+                <td><%= invoice.public_id %></td>
+                <td><%= Number(invoice.amount_sgd).toFixed(2) %></td>
+                <td><span class="badge bg-secondary"><%= invoice.status %></span></td>
+                <td><%= new Date(invoice.created_at).toLocaleString() %></td>
+                <td>
+                  <a href="/invoices/<%= invoice.public_id %>" class="btn btn-sm btn-outline-primary">View</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <nav class="mt-3" aria-label="Invoice table pagination">
+        <ul class="pagination pagination-sm mb-0" id="invoicePagination"></ul>
+      </nav>
+    </div>
+  </div>
+</main>
+
+<script src="/js/invoices.js"></script>
+
+<%- include('../partials/footer') %>
