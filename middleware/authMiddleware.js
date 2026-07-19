@@ -16,7 +16,16 @@ function requireGuest(req, res, next) {
   return next();
 }
 
+function verifyInternalApiKey(req, res, next) {
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey || apiKey !== process.env.INTERNAL_API_KEY) {
+    return res.status(401).json({ success: false, message: 'Invalid API key' });
+  }
+  return next();
+}
+
 module.exports = {
   requireAuth,
-  requireGuest
+  requireGuest,
+  verifyInternalApiKey
 };

@@ -1,4 +1,6 @@
 // Person 3: Responsible for blockchain payment model and transaction tracking.
+const { PAYMENT_STATUS } = require('../config/constants');
+
 module.exports = (sequelize, DataTypes) => {
   const Payment = sequelize.define(
     'Payment',
@@ -17,19 +19,9 @@ module.exports = (sequelize, DataTypes) => {
       confirmation_count: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
       required_confirmations: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 12 },
       status: {
-        type: DataTypes.ENUM(
-          'DETECTED',
-          'VERIFYING',
-          'CONFIRMING',
-          'CONFIRMED',
-          'UNDERPAID',
-          'OVERPAID',
-          'REJECTED',
-          'DUPLICATE',
-          'FAILED'
-        ),
+        type: DataTypes.ENUM(...Object.values(PAYMENT_STATUS)),
         allowNull: false,
-        defaultValue: 'DETECTED'
+        defaultValue: PAYMENT_STATUS.DETECTED
       },
       detected_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
       confirmed_at: { type: DataTypes.DATE, allowNull: true },
@@ -41,12 +33,12 @@ module.exports = (sequelize, DataTypes) => {
     {
       tableName: 'payments',
       indexes: [
-        { unique: true, fields: ['transaction_hash'] },
-        { unique: true, fields: ['chain_id', 'transaction_hash', 'log_index'] },
-        { fields: ['invoice_id'] },
-        { fields: ['status'] },
-        { fields: ['payer_wallet'] },
-        { fields: ['confirmed_at'] }
+        { unique: true, fields: ['transaction_hash'], name: 'idx_transaction_hash_unique' },
+        { unique: true, fields: ['chain_id', 'transaction_hash', 'log_index'], name: 'unique_blockchain_event' },
+        { fields: ['invoice_id'], name: 'idx_invoice' },
+        { fields: ['status'], name: 'idx_status' },
+        { fields: ['payer_wallet'], name: 'idx_payer' },
+        { fields: ['confirmed_at'], name: 'idx_confirmed' }
       ]
     }
   );

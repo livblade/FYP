@@ -16,7 +16,12 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       tableName: 'webhook_events',
-      indexes: [{ fields: ['provider'] }, { fields: ['processing_status'] }, { fields: ['external_event_id'] }, { fields: ['payload_hash'] }]
+      indexes: [
+        { fields: ['provider'], name: 'idx_provider' },
+        { fields: ['processing_status'], name: 'idx_status' },
+        { fields: ['external_event_id'], name: 'idx_external' },
+        { fields: ['payload_hash'], name: 'idx_payload' }
+      ]
     }
   );
 

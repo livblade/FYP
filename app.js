@@ -42,7 +42,7 @@ app.use('/auth', authRoutes);
 app.use('/merchants', merchantRoutes);
 app.use('/invoices', invoiceRoutes);
 app.use('/payments', paymentRoutes);
-app.use('/webhooks', webhookRoutes);
+app.use('/', webhookRoutes);
 app.use('/settlements', settlementRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/notifications', notificationRoutes);
