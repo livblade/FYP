@@ -26,7 +26,14 @@ body {
   background: radial-gradient(circle at top right, #1a2a4a 0%, #0b0e11 55%);
   background-color: var(--color-bg);
   color: var(--color-text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+main {
+  flex: 1 0 auto;
 }
 
 .app-navbar {
@@ -38,6 +45,7 @@ body {
   background: #0a0d12;
   color: #aeb7c6;
   border-top: 1px solid var(--border-soft);
+  margin-top: auto;
 }
 
 .landing-wrap {
