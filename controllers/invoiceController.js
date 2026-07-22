@@ -122,7 +122,7 @@ async function createInvoice(req, res, next) {
       : new Date(Date.now() + expiresMinutes * 60 * 1000);
 
     const publicId = generatePublicInvoiceId();
-    const paymentLink = `${req.protocol}://${req.get('host')}/payments/checkout/${publicId}`;
+    const paymentLink = `${req.protocol}://${req.get('host')}/pay/${publicId}`;
 
     const invoice = await Invoice.create({
       public_id: publicId,

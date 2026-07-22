@@ -5,30 +5,54 @@
 <main class="container-fluid py-4">
   <div class="row justify-content-center">
     <div class="col-12 col-lg-8">
-      <div class="card shadow-sm" id="checkoutCard" data-invoice-public-id="<%= invoice.public_id %>">
+      <div
+        class="card shadow-sm"
+        id="checkoutCard"
+        data-invoice-public-id="<%= invoice.public_id %>"
+        data-contract-address="<%= checkoutConfig.contractAddress %>"
+        data-contract-configured="<%= checkoutConfig.isContractConfigured ? 'true' : 'false' %>"
+        data-invoice-hash="<%= checkoutConfig.invoiceHash %>"
+        data-required-crypto-amount="<%= invoice.required_crypto_amount || '' %>"
+        data-chain-id="<%= checkoutConfig.chainId %>"
+        data-chain-id-hex="<%= checkoutConfig.chainIdHex %>"
+        data-explorer-base-url="<%= checkoutConfig.explorerBaseUrl %>"
+      >
         <div class="card-body">
           <h1 class="h4">Pay Invoice</h1>
           <p>Invoice: <strong><%= invoice.public_id %></strong></p>
           <p>Merchant: <strong><%= invoice.merchant ? invoice.merchant.business_name : 'Unknown Merchant' %></strong></p>
           <p>Amount due: <strong><%= invoice.required_crypto_amount || 'TBD' %> <%= invoice.accepted_token %></strong> (SGD <%= Number(invoice.amount_sgd).toFixed(2) %>)</p>
+          <p class="small text-muted mb-2">Invoice hash: <code><%= checkoutConfig.invoiceHash %></code></p>
+          <p class="small text-muted mb-3">Gateway: <code><%= checkoutConfig.isContractConfigured ? checkoutConfig.contractAddress : 'Not configured' %></code></p>
           <div class="countdown-box mb-3">Time left: <strong id="checkoutCountdown" data-expiry="<%= new Date(invoice.expires_at).toISOString() %>">--:--</strong></div>
 
           <ol class="list-group list-group-numbered mb-3" id="checkoutSteps">
             <li class="list-group-item" data-step="connect">Connect Wallet</li>
-            <li class="list-group-item" data-step="intent">Create Payment Intent</li>
+            <li class="list-group-item" data-step="network">Switch to Sepolia</li>
             <li class="list-group-item" data-step="submitted">Transaction Submitted</li>
             <li class="list-group-item" data-step="verify">Verifying</li>
             <li class="list-group-item" data-step="complete">Completed</li>
           </ol>
 
           <button id="connectWalletBtn" class="btn btn-primary me-2">Connect MetaMask</button>
-          <button id="payNowBtn" class="btn btn-success">Pay Now</button>
+          <button id="payNowBtn" class="btn btn-success" <%= checkoutConfig.isContractConfigured && invoice.required_crypto_amount ? '' : 'disabled' %>>Pay Now</button>
           <div id="checkoutStatus" class="alert alert-secondary mt-3 mb-0" role="status">Awaiting wallet connection.</div>
+          <div id="transactionHashBox" class="mt-3 d-none">
+            <div class="small text-muted">Submitted transaction</div>
+            <a id="transactionHashLink" href="#" target="_blank" rel="noopener" class="font-monospace text-break"></a>
+          </div>
+          <% if (!checkoutConfig.isContractConfigured) { %>
+            <div class="alert alert-warning mt-3 mb-0">Payment gateway contract is not configured. Deploy the contract and set CONTRACT_ADDRESS before testing MetaMask checkout.</div>
+          <% } else if (!invoice.required_crypto_amount) { %>
+            <div class="alert alert-warning mt-3 mb-0">This invoice does not have a locked ETH quote yet. Add required_crypto_amount before payment.</div>
+          <% } %>
         </div>
       </div>
     </div>
   </div>
 </main>
+<script id="paymentGatewayAbi" type="application/json"><%- JSON.stringify(checkoutConfig.contractAbi) %></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
 <script src="/js/metamask.js"></script>
 <script src="/js/checkout.js"></script>
 

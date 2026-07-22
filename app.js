@@ -19,6 +19,7 @@ const webhookRoutes = require('./routes/webhookRoutes');
 const settlementRoutes = require('./routes/settlementRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const checkoutController = require('./controllers/checkoutController');
 
 const app = express();
 
@@ -42,6 +43,8 @@ app.use('/auth', authRoutes);
 app.use('/merchants', merchantRoutes);
 app.use('/invoices', invoiceRoutes);
 app.use('/payments', paymentRoutes);
+app.use('/api/payments', paymentRoutes);
+app.get('/pay/:invoicePublicId', checkoutController.renderPay);
 app.use('/', webhookRoutes);
 app.use('/settlements', settlementRoutes);
 app.use('/dashboard', dashboardRoutes);

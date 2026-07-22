@@ -8,7 +8,9 @@
     "dev": "nodemon app.js",
     "db:apply-prompt-schema": "node scripts/applyPromptSchema.js",
     "db:verify": "node scripts/verifyDatabase.js",
-    "test:verification": "mocha tests/unit/verificationService.test.js"
+    "test:verification": "mocha tests/unit/verificationService.test.js",
+    "test:contract": "cd blockchain && hardhat test",
+    "deploy:sepolia": "cd blockchain && hardhat run scripts/deploy.js --network sepolia"
   },
   "keywords": [
     "crypto",
@@ -30,7 +32,6 @@
     "ethers": "^6.9.0",
     "express": "^4.19.2",
     "express-session": "^1.18.0",
-    "hardhat": "^3.10.0",
     "helmet": "^7.1.0",
     "joi": "^17.13.3",
     "morgan": "^1.10.0",
@@ -39,8 +40,9 @@
     "winston": "^3.19.0"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
-    "chai": "^6.2.2",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "chai": "^4.5.0",
+    "hardhat": "^2.28.0",
     "mocha": "^11.7.6",
     "nodemon": "^3.1.4",
     "sequelize-cli": "^6.6.5"
