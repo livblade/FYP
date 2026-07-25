@@ -1,6 +1,243 @@
 {
-  "owner": "Person 4",
-  "purpose": "Payment monitoring workflow placeholder",
-  "nodes": [],
-  "connections": {}
+  "name": "Person 2 - Payment Submission and Monitoring",
+  "owner": "Person 2",
+  "purpose": "Accept a submitted MetaMask transaction hash, save it in Express, poll invoice payment status, and return a consistent monitoring result.",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "payment-monitor",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "Webhook_Payment_Submission",
+      "name": "Webhook - Payment Submission",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst txPattern = /^0x[A-Fa-f0-9]{64}$/;\nconst addressPattern = /^0x[A-Fa-f0-9]{40}$/;\nconst errors = [];\n\nif (!body.invoice_public_id) errors.push('invoice_public_id is required');\nif (!txPattern.test(String(body.transaction_hash || ''))) errors.push('transaction_hash must be a 32-byte hex string');\nif (!addressPattern.test(String(body.wallet_address || ''))) errors.push('wallet_address must be an Ethereum address');\nif (Number(body.chain_id) !== 11155111) errors.push('chain_id must be Sepolia 11155111');\n\nreturn [{\n  json: {\n    valid: errors.length === 0,\n    errors,\n    payment: {\n      invoice_public_id: body.invoice_public_id,\n      transaction_hash: String(body.transaction_hash || '').toLowerCase(),\n      wallet_address: String(body.wallet_address || '').toLowerCase(),\n      chain_id: Number(body.chain_id),\n      crypto_amount: body.crypto_amount\n    }\n  }\n}];"
+      },
+      "id": "Code_Validate_Input",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.valid}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "IF_Input_Valid",
+      "name": "Input Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.EXPRESS_BASE_URL || 'http://localhost:3000'}}/api/payments/submit",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-internal-api-key",
+              "value": "={{$env.INTERNAL_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.payment}}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "HTTP_Save_Pending_Payment",
+      "name": "Save Pending Payment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [720, -120],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "Wait_For_Receipt",
+      "name": "Wait Before Poll",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [960, -120]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.EXPRESS_BASE_URL || 'http://localhost:3000'}}/api/payments/status/{{$node['Validate Input'].json.payment.invoice_public_id}}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-internal-api-key",
+              "value": "={{$env.INTERNAL_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "HTTP_Poll_Status",
+      "name": "Poll Payment Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1200, -120],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $json;\nconst data = response.data || {};\nconst paymentStatus = data.payment_status || 'UNKNOWN';\nconst invoiceStatus = data.invoice_status || 'UNKNOWN';\nconst failed = ['FAILED', 'REJECTED', 'UNDERPAID', 'OVERPAID', 'DUPLICATE'].includes(paymentStatus) || invoiceStatus === 'FAILED';\nconst confirmed = paymentStatus === 'CONFIRMED' || invoiceStatus === 'PAID';\n\nreturn [{\n  json: {\n    success: confirmed,\n    pending: !confirmed && !failed,\n    failed,\n    invoice_public_id: data.invoice_public_id,\n    transaction_hash: data.transaction_hash || $node['Validate Input'].json.payment.transaction_hash,\n    payment_status: paymentStatus,\n    invoice_status: invoiceStatus,\n    confirmations: data.confirmations || 0,\n    required_confirmations: data.required_confirmations || 0\n  }\n}];"
+      },
+      "id": "Code_Classify_Status",
+      "name": "Classify Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, -120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "Respond_Monitoring_Result",
+      "name": "Respond Monitoring Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1680, -120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: { code: 'INVALID_PAYMENT_SUBMISSION', message: 'Payment submission failed validation.', details: $json.errors } } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "Respond_Invalid_Input",
+      "name": "Respond Invalid Input",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [720, 140]
+    }
+  ],
+  "connections": {
+    "Webhook - Payment Submission": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Input Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Valid?": {
+      "main": [
+        [
+          {
+            "node": "Save Pending Payment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Pending Payment": {
+      "main": [
+        [
+          {
+            "node": "Wait Before Poll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Before Poll": {
+      "main": [
+        [
+          {
+            "node": "Poll Payment Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Payment Status": {
+      "main": [
+        [
+          {
+            "node": "Classify Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Status": {
+      "main": [
+        [
+          {
+            "node": "Respond Monitoring Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionTimeout": 120
+  },
+  "active": false,
+  "versionId": "person2-payment-monitoring-mvp"
 }

@@ -11,6 +11,7 @@ router.get('/checkout/:invoicePublicId/success', checkoutController.renderSucces
 router.get('/checkout/:invoicePublicId/failed', checkoutController.renderFailed);
 
 router.post('/intent', apiRateLimit(), paymentController.createPaymentIntent);
+router.post('/submit', apiRateLimit(), paymentController.submitPayment);
 router.get('/status/:invoicePublicId', paymentController.getPaymentStatus);
 router.get('/', paymentController.listPayments);
 

@@ -1,5 +1,5 @@
 // Person 1: Responsible for shared dashboard pages and summary API placeholders.
-const { DataTypes } = require('sequelize');
+const { DataTypes, Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 const defineMerchant = require('../models/Merchant');
 const defineInvoice = require('../models/Invoice');
@@ -67,6 +67,37 @@ async function getMetrics(req, res, next) {
 
     const settlements = await Settlement.findAll({ where: { merchant_id: merchant.merchant_id } });
 
+    const settlementPaymentIds = settlements.map((settlement) => settlement.payment_id).filter(Boolean);
+    const settlementPayments = settlementPaymentIds.length
+      ? await Payment.findAll({ where: { payment_id: settlementPaymentIds } })
+      : [];
+    const paymentById = new Map(settlementPayments.map((payment) => [payment.payment_id, payment]));
+
+    let settlementDurationMinutesTotal = 0;
+    let settlementDurationSamples = 0;
+    for (const settlement of settlements) {
+      const payment = paymentById.get(settlement.payment_id);
+      const startAt = payment && (payment.confirmed_at || payment.created_at);
+      const endAt = settlement.completed_at || settlement.settled_at || settlement.created_at;
+
+      if (!startAt || !endAt) {
+        continue;
+      }
+
+      const startMs = new Date(startAt).getTime();
+      const endMs = new Date(endAt).getTime();
+      if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) {
+        continue;
+      }
+
+      settlementDurationMinutesTotal += (endMs - startMs) / 60000;
+      settlementDurationSamples += 1;
+    }
+
+    const avgSettlementTimeMinutes = settlementDurationSamples
+      ? settlementDurationMinutesTotal / settlementDurationSamples
+      : 0;
+
     const paidInvoices = allMerchantInvoices.filter((invoice) => {
       return ['PAID', 'SETTLEMENT_PENDING', 'SETTLED'].includes(invoice.status);
     });
@@ -96,7 +127,8 @@ async function getMetrics(req, res, next) {
           revenue_sgd: Number(revenue.toFixed(2)),
           transaction_count: payments.length,
           pending_payments: pendingPayments,
-          settlement_count: settlements.length
+          settlement_count: settlements.length,
+          avg_settlement_time_minutes: Number(avgSettlementTimeMinutes.toFixed(1))
         },
         recent_invoices: invoices.map((invoice) => {
           const latestPayment = latestPaymentByInvoiceId.get(invoice.invoice_id);
@@ -115,7 +147,106 @@ async function getMetrics(req, res, next) {
   }
 }
 
+function buildDateRangeFilter(from, to) {
+  const filter = {};
+  if (from) {
+    const fromDate = new Date(from);
+    if (!Number.isNaN(fromDate.getTime())) {
+      filter[Op.gte] = fromDate;
+    }
+  }
+  if (to) {
+    const toDate = new Date(to);
+    if (!Number.isNaN(toDate.getTime())) {
+      filter[Op.lte] = toDate;
+    }
+  }
+  return Object.keys(filter).length ? filter : null;
+}
+
+async function getPaymentHistory(req, res, next) {
+  try {
+    const sessionUser = req.session.user || null;
+    if (!sessionUser || !sessionUser.user_id) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const merchant = await Merchant.findOne({ where: { user_id: sessionUser.user_id } });
+    if (!merchant) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const invoices = await Invoice.findAll({ where: { merchant_id: merchant.merchant_id } });
+    const invoiceIds = invoices.map((invoice) => invoice.invoice_id);
+    if (!invoiceIds.length) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const where = { invoice_id: invoiceIds };
+    if (req.query.status) {
+      where.status = String(req.query.status).toUpperCase();
+    }
+
+    const dateRange = buildDateRangeFilter(req.query.from, req.query.to);
+    if (dateRange) {
+      where.created_at = dateRange;
+    }
+
+    const payments = await Payment.findAll({
+      where,
+      order: [['created_at', 'DESC']],
+      limit: 200
+    });
+
+    return res.json({
+      success: true,
+      data: payments
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getSettlementHistory(req, res, next) {
+  try {
+    const sessionUser = req.session.user || null;
+    if (!sessionUser || !sessionUser.user_id) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const merchant = await Merchant.findOne({ where: { user_id: sessionUser.user_id } });
+    if (!merchant) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const where = { merchant_id: merchant.merchant_id };
+    if (req.query.status) {
+      where.status = String(req.query.status).toUpperCase();
+    }
+
+    const dateRange = buildDateRangeFilter(req.query.from, req.query.to);
+    if (dateRange) {
+      where.created_at = dateRange;
+    }
+
+    const settlements = await Settlement.findAll({
+      where,
+      order: [['created_at', 'DESC']],
+      limit: 200
+    });
+
+    return res.json({
+      success: true,
+      data: settlements
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   renderIndex,
-  getMetrics
+  getMetrics,
+  getPaymentHistory,
+  getSettlementHistory
 };

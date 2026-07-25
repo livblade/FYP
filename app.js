@@ -19,6 +19,7 @@ const webhookRoutes = require('./routes/webhookRoutes');
 const settlementRoutes = require('./routes/settlementRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const checkoutController = require('./controllers/checkoutController');
 
 const app = express();
 
@@ -31,6 +32,10 @@ app.use(sessionConfig);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/vendor/ethers.umd.min.js', (req, res) => {
+  return res.sendFile(path.join(__dirname, 'node_modules', 'ethers', 'dist', 'ethers.umd.min.js'));
+});
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -42,6 +47,8 @@ app.use('/auth', authRoutes);
 app.use('/merchants', merchantRoutes);
 app.use('/invoices', invoiceRoutes);
 app.use('/payments', paymentRoutes);
+app.use('/api/payments', paymentRoutes);
+app.get('/pay/:invoicePublicId', checkoutController.renderPay);
 app.use('/', webhookRoutes);
 app.use('/settlements', settlementRoutes);
 app.use('/dashboard', dashboardRoutes);

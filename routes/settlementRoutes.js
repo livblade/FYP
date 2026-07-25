@@ -7,7 +7,11 @@ const { requireMerchantRole } = require('../middleware/merchantMiddleware');
 const router = express.Router();
 
 router.get('/', requireAuth, requireMerchantRole, settlementController.renderList);
+router.get('/api', requireAuth, requireMerchantRole, settlementController.listSettlementsApi);
+router.get('/api/:publicId', requireAuth, requireMerchantRole, settlementController.getSettlementDetailApi);
 router.get('/:publicId', requireAuth, requireMerchantRole, settlementController.renderDetail);
 router.post('/', requireAuth, requireMerchantRole, settlementController.createSettlement);
+router.post('/:publicId/status', requireAuth, requireMerchantRole, settlementController.updateSettlementStatus);
+router.get('/api/reconcile', requireAuth, requireMerchantRole, settlementController.reconcileSettlements);
 
 module.exports = router;

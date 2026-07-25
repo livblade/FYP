@@ -6,6 +6,9 @@
   <div class="alert alert-success shadow-sm mx-auto" style="max-width: 680px;">
     <h1 class="h4">Payment Success</h1>
     <p class="mb-3">Your transaction has been submitted and is being confirmed on-chain.</p>
+    <% if (transactionHash) { %>
+      <p class="small text-break">Transaction hash: <code><%= transactionHash %></code></p>
+    <% } %>
     <a href="/dashboard" class="btn btn-success">Back to Dashboard</a>
   </div>
 </main>

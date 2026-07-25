@@ -32,7 +32,7 @@ function renderMetrics(totals) {
   setText('metricRevenue', revenue);
   setText('metricTransactions', totals.transaction_count || 0);
   setText('metricPending', totals.pending_payments || 0);
-  setText('metricSettlements', totals.settlement_count || 0);
+  setText('metricAvgSettlementTime', Number(totals.avg_settlement_time_minutes || 0).toFixed(1));
 }
 
 function renderRecentInvoices(invoices) {

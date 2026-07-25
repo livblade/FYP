@@ -6,6 +6,9 @@
   <div class="alert alert-danger shadow-sm mx-auto" style="max-width: 680px;">
     <h1 class="h4">Payment Failed</h1>
     <p class="mb-3">Transaction could not be completed. Please retry or contact support.</p>
+    <% if (transactionHash) { %>
+      <p class="small text-break">Transaction hash: <code><%= transactionHash %></code></p>
+    <% } %>
     <a href="javascript:history.back()" class="btn btn-danger me-2">Try Again</a>
     <a href="/dashboard" class="btn btn-outline-dark">Go to Dashboard</a>
   </div>

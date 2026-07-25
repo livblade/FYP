@@ -1,5 +1,6 @@
 // Person 2: Responsible for Hardhat environment configuration.
 require('dotenv').config({ path: '../.env' });
+require('@nomicfoundation/hardhat-toolbox');
 
 module.exports = {
   solidity: '0.8.24',

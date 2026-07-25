@@ -17,8 +17,13 @@ function requireGuest(req, res, next) {
 }
 
 function verifyInternalApiKey(req, res, next) {
+  const configuredKey = process.env.INTERNAL_API_KEY;
+  if (process.env.NODE_ENV !== 'production' && !configuredKey) {
+    return next();
+  }
+
   const apiKey = req.headers['x-api-key'];
-  if (!apiKey || apiKey !== process.env.INTERNAL_API_KEY) {
+  if (!apiKey || apiKey !== configuredKey) {
     return res.status(401).json({ success: false, message: 'Invalid API key' });
   }
   return next();
