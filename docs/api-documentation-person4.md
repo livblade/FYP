@@ -1,6 +1,6 @@
 # Person 4: API Documentation
 
-This document outlines the API endpoints managed by Person 4, primarily related to settlements and internal verification processes.
+This document outlines the API endpoints managed by Person 4, primarily related to settlements, internal verification, and reconciliation.
 
 **Authentication**: All `/api` endpoints for merchants require a valid session cookie obtained through the login flow. The `/internal` endpoint requires an API key.
 
@@ -85,6 +85,31 @@ Base Path: `/settlements`
     }
     ```
 *   **Success Response (200 OK)**: Returns the updated settlement object.
+
+### Reconcile Settlements
+
+*   **Endpoint**: `GET /settlements/api/reconcile`
+*   **Description**: Retrieves a summary of all settlements for the merchant, grouped by status, along with the full list.
+*   **Auth**: `requireAuth`, `requireMerchantRole`
+*   **Success Response (200 OK)**:
+    ```json
+    {
+      "success": true,
+      "data": {
+        "summary": {
+          "total": 1,
+          "created": 1,
+          "processing": 0,
+          "completed": 0,
+          "failed": 0,
+          "manual_review": 0
+        },
+        "settlements": [
+          { "...settlement object..." }
+        ]
+      }
+    }
+    ```
 
 ## Internal Verification
 
