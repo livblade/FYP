@@ -32,6 +32,10 @@ app.use(sessionConfig);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/vendor/ethers.umd.min.js', (req, res) => {
+  return res.sendFile(path.join(__dirname, 'node_modules', 'ethers', 'dist', 'ethers.umd.min.js'));
+});
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 

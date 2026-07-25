@@ -5,6 +5,8 @@ const { sequelize } = require('../config/database');
 const definePayment = require('../models/Payment');
 const defineInvoice = require('../models/Invoice');
 const { PAYMENT_STATUS, INVOICE_STATUS } = require('../config/constants');
+const { defaultPaymentGatewayAbi } = require('../config/blockchain');
+const auditLogService = require('./auditLogService');
 const logger = require('../utils/logger');
 
 const Payment = definePayment(sequelize, DataTypes);
@@ -26,24 +28,25 @@ class PaymentVerificationService {
 
   getProvider() {
     if (!this.provider) {
-      this.provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_RPC_URL);
+      const rpcUrl = process.env.ALCHEMY_RPC_URL || process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
+      this.provider = new ethers.JsonRpcProvider(rpcUrl);
     }
     return this.provider;
   }
 
   parseContractAbi(abiValue) {
     if (!abiValue) {
-      return [];
+      return defaultPaymentGatewayAbi;
     }
     if (Array.isArray(abiValue)) {
-      return abiValue;
+      return abiValue.length > 0 ? abiValue : defaultPaymentGatewayAbi;
     }
     try {
       const parsed = JSON.parse(abiValue);
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultPaymentGatewayAbi;
     } catch (error) {
       logger.warn('Unable to parse CONTRACT_ABI from environment');
-      return [];
+      return defaultPaymentGatewayAbi;
     }
   }
 
@@ -64,9 +67,29 @@ class PaymentVerificationService {
       success,
       status,
       message,
-      data,
+      data: this.toJsonSafe(data),
       timestamp: new Date().toISOString()
     };
+  }
+
+  toJsonSafe(value) {
+    if (typeof value === 'bigint') {
+      return value.toString();
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => this.toJsonSafe(item));
+    }
+
+    if (value && typeof value === 'object') {
+      const output = {};
+      for (const [key, entry] of Object.entries(value)) {
+        output[key] = this.toJsonSafe(entry);
+      }
+      return output;
+    }
+
+    return value;
   }
 
   async verifyPayment(transactionHash, invoicePublicId) {
@@ -81,10 +104,6 @@ class PaymentVerificationService {
 
       if ([INVOICE_STATUS.PAID, INVOICE_STATUS.SETTLED].includes(invoice.status)) {
         return this.createResult(false, PAYMENT_STATUS.DUPLICATE, 'Invoice already paid');
-      }
-
-      if (invoice.expires_at && new Date(invoice.expires_at) < new Date()) {
-        return this.createResult(false, PAYMENT_STATUS.REJECTED, 'Invoice has expired');
       }
 
       const receipt = await this.getTransactionReceiptWithRetry(transactionHash);
@@ -150,12 +169,11 @@ class PaymentVerificationService {
       const existingPayment = await Payment.findOne({
         where: {
           chain_id: this.chainId,
-          transaction_hash: transactionHash,
-          log_index: eventData.logIndex
+          transaction_hash: transactionHash
         }
       });
 
-      if (existingPayment) {
+      if (existingPayment && existingPayment.status === PAYMENT_STATUS.CONFIRMED) {
         return this.createResult(false, PAYMENT_STATUS.DUPLICATE, 'This transaction has already been processed', {
           payment_id: existingPayment.payment_id
         });
@@ -165,7 +183,8 @@ class PaymentVerificationService {
       const confirmations = Math.max(0, Number(currentBlock) - Number(receipt.blockNumber));
 
       if (confirmations < this.minConfirmations) {
-        const payment = await this.createPayment(
+        const payment = await this.saveVerifiedPayment(
+          existingPayment,
           {
             invoiceId: invoice.invoice_id,
             transactionHash,
@@ -189,7 +208,8 @@ class PaymentVerificationService {
         );
       }
 
-      const payment = await this.createPayment(
+      const payment = await this.saveVerifiedPayment(
+        existingPayment,
         {
           invoiceId: invoice.invoice_id,
           transactionHash,
@@ -209,9 +229,9 @@ class PaymentVerificationService {
         success: true,
         status: PAYMENT_STATUS.CONFIRMED,
         message: 'Payment successfully verified and confirmed',
-        payment,
-        invoice,
-        eventData,
+        payment: this.toJsonSafe(payment),
+        invoice: this.toJsonSafe(invoice),
+        eventData: this.toJsonSafe(eventData),
         confirmations,
         verificationTime: Date.now() - startTime
       };
@@ -306,6 +326,67 @@ class PaymentVerificationService {
       gas_price_eth: gasPrice !== null ? ethers.formatEther(gasPrice) : null,
       transaction_fee_eth: feeWei !== null ? ethers.formatEther(feeWei) : null
     });
+  }
+
+  async saveVerifiedPayment(existingPayment, data, status = PAYMENT_STATUS.CONFIRMING) {
+    const gasUsed = data.receipt?.gasUsed ? BigInt(data.receipt.gasUsed) : null;
+    const gasPrice = data.receipt?.gasPrice ? BigInt(data.receipt.gasPrice) : null;
+    const feeWei = gasUsed !== null && gasPrice !== null ? gasUsed * gasPrice : null;
+
+    const paymentData = {
+      invoice_id: data.invoiceId,
+      transaction_hash: data.transactionHash,
+      log_index: Number(data.eventData.logIndex || 0),
+      chain_id: this.chainId,
+      payer_wallet: data.payerWallet,
+      token_address: data.eventData.token || ZERO_ADDRESS,
+      token_symbol: 'ETH',
+      crypto_amount: ethers.formatEther(data.cryptoAmount),
+      block_number: Number(data.blockNumber),
+      confirmation_count: Number(data.confirmations || 0),
+      required_confirmations: this.minConfirmations,
+      status,
+      confirmed_at: status === PAYMENT_STATUS.CONFIRMED ? new Date() : null,
+      gas_used: gasUsed !== null ? String(gasUsed) : null,
+      gas_price_eth: gasPrice !== null ? ethers.formatEther(gasPrice) : null,
+      transaction_fee_eth: feeWei !== null ? ethers.formatEther(feeWei) : null
+    };
+
+    if (existingPayment) {
+      const oldValues = existingPayment.get({ plain: true });
+      await existingPayment.update(paymentData);
+
+      await auditLogService.logAction({
+        action: 'PAYMENT_VERIFICATION_UPDATED',
+        entityType: 'payment',
+        entityId: existingPayment.payment_id,
+        oldValues,
+        newValues: existingPayment.get({ plain: true }),
+        metadata: {
+          verification_source: 'paymentVerificationService',
+          target_status: status
+        }
+      });
+      return existingPayment;
+    }
+
+    const payment = await Payment.create({
+      ...paymentData,
+      detected_at: new Date()
+    });
+
+    await auditLogService.logAction({
+      action: 'PAYMENT_VERIFICATION_CREATED',
+      entityType: 'payment',
+      entityId: payment.payment_id,
+      newValues: payment.get({ plain: true }),
+      metadata: {
+        verification_source: 'paymentVerificationService',
+        target_status: status
+      }
+    });
+
+    return payment;
   }
 
   async updatePaymentConfirmations(paymentId, confirmations) {

@@ -5,6 +5,8 @@ const defineMerchant = require('../models/Merchant');
 const defineInvoice = require('../models/Invoice');
 const definePayment = require('../models/Payment');
 const defineSettlement = require('../models/Settlement');
+const exchangeRateService = require('../services/exchangeRateService');
+const auditLogService = require('../services/auditLogService');
 
 const Merchant = defineMerchant(sequelize, DataTypes);
 const Invoice = defineInvoice(sequelize, DataTypes);
@@ -123,6 +125,11 @@ async function createInvoice(req, res, next) {
 
     const publicId = generatePublicInvoiceId();
     const paymentLink = `${req.protocol}://${req.get('host')}/pay/${publicId}`;
+    const quoteResult = await exchangeRateService.getQuote({ amountSgd });
+
+    if (!quoteResult.success || !quoteResult.cryptoAmount) {
+      return res.status(400).json({ success: false, message: quoteResult.message || 'Unable to generate ETH quote' });
+    }
 
     const invoice = await Invoice.create({
       public_id: publicId,
@@ -132,12 +139,25 @@ async function createInvoice(req, res, next) {
       description: req.body.description || null,
       amount_sgd: amountSgd,
       accepted_token: acceptedToken,
-      required_crypto_amount: null,
-      quote_id: `Q-${Date.now()}`,
+      required_crypto_amount: quoteResult.cryptoAmount,
+      quote_id: `Q-${Date.now()}-${quoteResult.source}`,
       contract_invoice_hash: null,
       payment_link: paymentLink,
       expires_at: expiresAt,
       status: 'AWAITING_PAYMENT'
+    });
+
+    await auditLogService.logAction({
+      req,
+      userId: req.session && req.session.user ? req.session.user.user_id : null,
+      action: 'INVOICE_CREATED',
+      entityType: 'invoice',
+      entityId: invoice.invoice_id,
+      newValues: invoice.get({ plain: true }),
+      metadata: {
+        public_id: invoice.public_id,
+        quote_source: quoteResult.source
+      }
     });
 
     if (req.accepts('html')) {
@@ -179,7 +199,21 @@ async function updateInvoice(req, res, next) {
       updates.expires_at = new Date(req.body.expires_at);
     }
 
+    const oldValues = invoice.get({ plain: true });
     await invoice.update(updates);
+
+    await auditLogService.logAction({
+      req,
+      userId: req.session && req.session.user ? req.session.user.user_id : null,
+      action: 'INVOICE_UPDATED',
+      entityType: 'invoice',
+      entityId: invoice.invoice_id,
+      oldValues,
+      newValues: invoice.get({ plain: true }),
+      metadata: {
+        public_id: invoice.public_id
+      }
+    });
 
     if (req.accepts('html')) {
       return res.redirect(`/invoices/${invoice.public_id}`);
@@ -209,7 +243,20 @@ async function deleteInvoice(req, res, next) {
       return res.status(404).json({ success: false, message: 'Invoice not found' });
     }
 
+    const oldValues = invoice.get({ plain: true });
     await invoice.destroy();
+
+    await auditLogService.logAction({
+      req,
+      userId: req.session && req.session.user ? req.session.user.user_id : null,
+      action: 'INVOICE_DELETED',
+      entityType: 'invoice',
+      entityId: oldValues.invoice_id,
+      oldValues,
+      metadata: {
+        public_id: oldValues.public_id
+      }
+    });
 
     if (req.accepts('html')) {
       return res.redirect('/invoices');

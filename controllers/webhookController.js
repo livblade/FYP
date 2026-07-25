@@ -1,6 +1,5 @@
 // Person 3: Webhook handling controller.
 const crypto = require('crypto');
-const axios = require('axios');
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 const definePayment = require('../models/Payment');
@@ -8,6 +7,7 @@ const defineWebhookEvent = require('../models/WebhookEvent');
 const defineInvoice = require('../models/Invoice');
 const defineMerchant = require('../models/Merchant');
 const PaymentVerificationService = require('../services/paymentVerificationService');
+const n8nService = require('../services/n8nService');
 const { PAYMENT_STATUS } = require('../config/constants');
 const logger = require('../utils/logger');
 
@@ -162,15 +162,11 @@ class WebhookController {
         timestamp: new Date().toISOString()
       };
 
-      await axios.post(process.env.N8N_WEBHOOK_URL, payload, {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.N8N_API_KEY || ''
-        },
-        timeout: 5000
+      const result = await n8nService.triggerWorkflow({ type: 'settlement', payload });
+      logger.info('Settlement workflow triggered', {
+        payment_id: payment.payment_id,
+        mode: result.mode || 'unknown'
       });
-
-      logger.info('Settlement workflow triggered', { payment_id: payment.payment_id });
     } catch (error) {
       logger.error('Failed to trigger settlement workflow', { error: error.message });
     }

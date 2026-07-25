@@ -5,6 +5,8 @@ const defineInvoice = require('../models/Invoice');
 const definePayment = require('../models/Payment');
 const { INVOICE_STATUS, PAYMENT_STATUS } = require('../config/constants');
 const blockchainService = require('../services/blockchainService');
+const PaymentVerificationService = require('../services/paymentVerificationService');
+const auditLogService = require('../services/auditLogService');
 
 const Invoice = defineInvoice(sequelize, DataTypes);
 const Payment = definePayment(sequelize, DataTypes);
@@ -112,6 +114,18 @@ async function submitPayment(req, res, next) {
       payment_attempts: Number(invoice.payment_attempts || 0) + 1
     });
 
+    await auditLogService.logAction({
+      req,
+      userId: req.session && req.session.user ? req.session.user.user_id : null,
+      action: 'PAYMENT_SUBMITTED',
+      entityType: 'payment',
+      entityId: payment.payment_id,
+      newValues: payment.get({ plain: true }),
+      metadata: {
+        invoice_public_id: invoice.public_id
+      }
+    });
+
     return res.status(201).json({
       success: true,
       message: 'Transaction submitted for independent verification',
@@ -129,12 +143,12 @@ async function submitPayment(req, res, next) {
 
 async function getPaymentStatus(req, res, next) {
   try {
-    const invoice = await Invoice.findOne({ where: { public_id: req.params.invoicePublicId } });
+    let invoice = await Invoice.findOne({ where: { public_id: req.params.invoicePublicId } });
     if (!invoice) {
       return res.status(404).json({ success: false, message: 'Invoice not found' });
     }
 
-    const payment = await Payment.findOne({
+    let payment = await Payment.findOne({
       where: { invoice_id: invoice.invoice_id },
       order: [['created_at', 'DESC']]
     });
@@ -148,6 +162,20 @@ async function getPaymentStatus(req, res, next) {
           payment_status: 'AWAITING_PAYMENT',
           transaction_hash: null
         }
+      });
+    }
+
+    if (
+      payment &&
+      payment.transaction_hash &&
+      [PAYMENT_STATUS.DETECTED, PAYMENT_STATUS.CONFIRMING, PAYMENT_STATUS.VERIFYING].includes(payment.status)
+    ) {
+      await PaymentVerificationService.verifyPayment(payment.transaction_hash, invoice.public_id);
+
+      invoice = await Invoice.findOne({ where: { public_id: req.params.invoicePublicId } });
+      payment = await Payment.findOne({
+        where: { invoice_id: invoice.invoice_id },
+        order: [['created_at', 'DESC']]
       });
     }
 

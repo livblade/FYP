@@ -3,7 +3,19 @@ const { ethers } = require('hardhat');
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  const configuredTreasury = process.env.PAYMENT_GATEWAY_TREASURY;
+  if (!deployer) {
+    throw new Error(
+      'No deployer account found. Set PRIVATE_KEY in .env (without quotes, prefixed with 0x) before deploying to Sepolia.'
+    );
+  }
+
+  const configuredTreasury = (process.env.PAYMENT_GATEWAY_TREASURY || '').trim();
+  if (configuredTreasury && !ethers.isAddress(configuredTreasury)) {
+    throw new Error(
+      'PAYMENT_GATEWAY_TREASURY must be a valid wallet address (0x...). Do not paste a private key here.'
+    );
+  }
+
   const treasuryAddress =
     configuredTreasury && configuredTreasury !== ethers.ZeroAddress
       ? configuredTreasury

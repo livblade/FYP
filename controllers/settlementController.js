@@ -5,6 +5,8 @@ const defineMerchant = require('../models/Merchant');
 const defineInvoice = require('../models/Invoice');
 const definePayment = require('../models/Payment');
 const defineSettlement = require('../models/Settlement');
+const settlementService = require('../services/settlementService');
+const auditLogService = require('../services/auditLogService');
 
 const Merchant = defineMerchant(sequelize, DataTypes);
 const Invoice = defineInvoice(sequelize, DataTypes);
@@ -17,10 +19,6 @@ async function getMerchantBySessionUser(sessionUser) {
   }
 
   return Merchant.findOne({ where: { user_id: sessionUser.user_id } });
-}
-
-function generateSettlementReference() {
-  return `SIM-SGD-${Date.now()}`;
 }
 
 async function renderList(req, res, next) {
@@ -38,6 +36,25 @@ async function renderList(req, res, next) {
       user: req.session.user || null,
       settlements
     });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listSettlementsApi(req, res, next) {
+  try {
+    const merchant = await getMerchantBySessionUser(req.session.user || null);
+    if (!merchant) {
+      return res.status(400).json({ success: false, message: 'Merchant profile not found' });
+    }
+
+    const settlements = await Settlement.findAll({
+      where: { merchant_id: merchant.merchant_id },
+      order: [['created_at', 'DESC']],
+      limit: 200
+    });
+
+    return res.json({ success: true, data: settlements });
   } catch (error) {
     return next(error);
   }
@@ -75,6 +92,30 @@ async function renderDetail(req, res, next) {
   }
 }
 
+async function getSettlementDetailApi(req, res, next) {
+  try {
+    const merchant = await getMerchantBySessionUser(req.session.user || null);
+    if (!merchant) {
+      return res.status(400).json({ success: false, message: 'Merchant profile not found' });
+    }
+
+    const settlement = await Settlement.findOne({
+      where: {
+        merchant_id: merchant.merchant_id,
+        settlement_reference: req.params.publicId
+      }
+    });
+
+    if (!settlement) {
+      return res.status(404).json({ success: false, message: 'Settlement not found' });
+    }
+
+    return res.json({ success: true, data: settlement });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function createSettlement(req, res, next) {
   try {
     const merchant = await getMerchantBySessionUser(req.session.user || null);
@@ -97,31 +138,24 @@ async function createSettlement(req, res, next) {
       return res.status(403).json({ success: false, message: 'Payment does not belong to this merchant' });
     }
 
-    const alreadySettled = await Settlement.findOne({ where: { payment_id: payment.payment_id } });
-    if (alreadySettled) {
-      return res.status(409).json({ success: false, message: 'Settlement already exists for this payment' });
-    }
-
-    const gross = Number(invoice.amount_sgd);
-    const platformFee = (gross * Number(merchant.platform_fee_percentage || 0)) / 100;
-    const conversionFee = (gross * Number(merchant.conversion_fee_percentage || 0)) / 100;
-    const net = gross - platformFee - conversionFee;
-
-    const settlement = await Settlement.create({
-      merchant_id: merchant.merchant_id,
-      payment_id: payment.payment_id,
-      gross_amount_sgd: gross,
-      platform_fee_sgd: platformFee,
-      conversion_fee_sgd: conversionFee,
-      net_amount_sgd: net,
-      settlement_reference: generateSettlementReference(),
-      provider_reference: req.body.provider_reference || null,
-      payout_address: req.body.payout_address || null,
-      status: 'CREATED',
-      settled_at: new Date()
+    const settlement = await settlementService.createSettlementForPayment({
+      paymentId: payment.payment_id,
+      merchantId: merchant.merchant_id,
+      providerReference: req.body.provider_reference || null,
+      payoutAddress: req.body.payout_address || null
     });
 
-    await invoice.update({ status: 'SETTLED' });
+    await auditLogService.logAction({
+      req,
+      userId: req.session && req.session.user ? req.session.user.user_id : null,
+      action: 'SETTLEMENT_CREATED',
+      entityType: 'settlement',
+      entityId: settlement.settlement_id,
+      newValues: settlement.get({ plain: true }),
+      metadata: {
+        settlement_reference: settlement.settlement_reference
+      }
+    });
 
     if (req.accepts('html')) {
       return res.redirect(`/settlements/${settlement.settlement_reference}`);
@@ -133,8 +167,70 @@ async function createSettlement(req, res, next) {
   }
 }
 
+async function updateSettlementStatus(req, res, next) {
+  try {
+    const merchant = await getMerchantBySessionUser(req.session.user || null);
+    if (!merchant) {
+      return res.status(400).json({ success: false, message: 'Merchant profile not found' });
+    }
+
+    const settlement = await Settlement.findOne({
+      where: {
+        merchant_id: merchant.merchant_id,
+        settlement_reference: req.params.publicId
+      }
+    });
+
+    if (!settlement) {
+      return res.status(404).json({ success: false, message: 'Settlement not found' });
+    }
+
+    const oldValues = settlement.get({ plain: true });
+    const updated = await settlementService.updateSettlementStatus(
+      settlement.settlement_reference,
+      String(req.body.status || '').toUpperCase(),
+      req.body.failure_reason || null
+    );
+
+    await auditLogService.logAction({
+      req,
+      userId: req.session && req.session.user ? req.session.user.user_id : null,
+      action: 'SETTLEMENT_STATUS_UPDATED',
+      entityType: 'settlement',
+      entityId: updated.settlement_id,
+      oldValues,
+      newValues: updated.get({ plain: true }),
+      metadata: {
+        settlement_reference: updated.settlement_reference
+      }
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function reconcileSettlements(req, res, next) {
+  try {
+    const merchant = await getMerchantBySessionUser(req.session.user || null);
+    if (!merchant) {
+      return res.status(400).json({ success: false, message: 'Merchant profile not found' });
+    }
+
+    const result = await settlementService.reconcileMerchantSettlements(merchant.merchant_id);
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   renderList,
+  listSettlementsApi,
   renderDetail,
-  createSettlement
+  getSettlementDetailApi,
+  createSettlement,
+  updateSettlementStatus,
+  reconcileSettlements
 };

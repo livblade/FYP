@@ -7,5 +7,7 @@ const router = express.Router();
 
 router.get('/', requireAuth, dashboardController.renderIndex);
 router.get('/metrics', requireAuth, dashboardController.getMetrics);
+router.get('/payment-history', requireAuth, dashboardController.getPaymentHistory);
+router.get('/settlement-history', requireAuth, dashboardController.getSettlementHistory);
 
 module.exports = router;

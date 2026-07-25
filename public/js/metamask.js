@@ -1,27 +1,50 @@
 // Person 2: Responsible for MetaMask connection and chain switching helpers.
-function assertMetaMaskAvailable() {
+function getMetaMaskProvider() {
   if (!window.ethereum) {
+    return null;
+  }
+
+  // When multiple wallet extensions are installed, select MetaMask explicitly.
+  if (Array.isArray(window.ethereum.providers)) {
+    const metaMaskProvider = window.ethereum.providers.find(
+      (provider) => provider && provider.isMetaMask && !provider.isCoinbaseWallet
+    );
+    if (metaMaskProvider) {
+      return metaMaskProvider;
+    }
+  }
+
+  return window.ethereum.isMetaMask ? window.ethereum : null;
+}
+
+function assertMetaMaskAvailable() {
+  if (!getMetaMaskProvider()) {
     throw new Error('MetaMask is not installed.');
   }
 }
 
 async function connectMetaMask() {
   assertMetaMaskAvailable();
+  const provider = getMetaMaskProvider();
 
-  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+  // Ask for account permission so MetaMask can present account selection if needed.
+  await provider.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] }).catch(() => null);
+  const accounts = await provider.request({ method: 'eth_requestAccounts' });
   return accounts[0] || null;
 }
 
 async function getCurrentChainId() {
   assertMetaMaskAvailable();
-  return window.ethereum.request({ method: 'eth_chainId' });
+  const provider = getMetaMaskProvider();
+  return provider.request({ method: 'eth_chainId' });
 }
 
 async function switchToSepolia(chainIdHex = '0xaa36a7') {
   assertMetaMaskAvailable();
+  const provider = getMetaMaskProvider();
 
   try {
-    await window.ethereum.request({
+    await provider.request({
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: chainIdHex }]
     });
@@ -30,7 +53,7 @@ async function switchToSepolia(chainIdHex = '0xaa36a7') {
       throw error;
     }
 
-    await window.ethereum.request({
+    await provider.request({
       method: 'wallet_addEthereumChain',
       params: [
         {
@@ -49,6 +72,7 @@ async function switchToSepolia(chainIdHex = '0xaa36a7') {
 
 async function payNative({ contractAddress, abi, invoiceHash, amountEth }) {
   assertMetaMaskAvailable();
+  const provider = getMetaMaskProvider();
 
   if (!window.ethers) {
     throw new Error('ethers.js failed to load.');
@@ -60,7 +84,7 @@ async function payNative({ contractAddress, abi, invoiceHash, amountEth }) {
     throw new Error('Invoice is missing a locked ETH amount.');
   }
 
-  const browserProvider = new window.ethers.BrowserProvider(window.ethereum);
+  const browserProvider = new window.ethers.BrowserProvider(provider);
   const signer = await browserProvider.getSigner();
   const contract = new window.ethers.Contract(contractAddress, abi, signer);
   const value = window.ethers.parseEther(String(amountEth));

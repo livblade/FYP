@@ -4,6 +4,7 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 const defineUser = require('../models/User');
 const defineMerchant = require('../models/Merchant');
+const auditLogService = require('../services/auditLogService');
 
 const User = defineUser(sequelize, DataTypes);
 const Merchant = defineMerchant(sequelize, DataTypes);
@@ -65,6 +66,15 @@ async function login(req, res, next) {
       role: user.role
     };
 
+    await auditLogService.logAction({
+      req,
+      userId: user.user_id,
+      action: 'AUTH_LOGIN',
+      entityType: 'user',
+      entityId: user.user_id,
+      metadata: { email: user.email }
+    });
+
     return req.session.save(() => res.redirect('/dashboard'));
   } catch (error) {
     return next(error);
@@ -120,6 +130,22 @@ async function register(req, res, next) {
         role: 'MERCHANT'
       };
 
+      await auditLogService.logAction({
+        req,
+        userId: user.user_id,
+        action: 'AUTH_REGISTER',
+        entityType: 'user',
+        entityId: user.user_id,
+        newValues: {
+          name: user.name,
+          email: user.email,
+          role: user.role
+        },
+        metadata: {
+          merchant_business_name: businessName
+        }
+      });
+
       return req.session.save(() => res.redirect('/dashboard'));
     } catch (dbError) {
       await transaction.rollback();
@@ -132,6 +158,18 @@ async function register(req, res, next) {
 
 function logout(req, res, next) {
   try {
+    const sessionUser = req.session && req.session.user ? req.session.user : null;
+    if (sessionUser) {
+      auditLogService.logAction({
+        req,
+        userId: sessionUser.user_id,
+        action: 'AUTH_LOGOUT',
+        entityType: 'user',
+        entityId: sessionUser.user_id,
+        metadata: { email: sessionUser.email }
+      });
+    }
+
     req.session.destroy((error) => {
       if (error) {
         return next(error);

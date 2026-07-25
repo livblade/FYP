@@ -1,7 +1,7 @@
 // Person 2: Responsible for blockchain provider and contract client configuration.
 const { ethers } = require('ethers');
 
-const rpcUrl = process.env.ALCHEMY_RPC_URL || '';
+const rpcUrl = process.env.ALCHEMY_RPC_URL || process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
 const provider = rpcUrl ? new ethers.JsonRpcProvider(rpcUrl) : null;
 
 const contractAddress = process.env.CONTRACT_ADDRESS || '';
@@ -19,7 +19,12 @@ const defaultPaymentGatewayAbi = [
 let contractAbi = defaultPaymentGatewayAbi;
 
 try {
-  contractAbi = process.env.CONTRACT_ABI ? JSON.parse(process.env.CONTRACT_ABI) : defaultPaymentGatewayAbi;
+  if (!process.env.CONTRACT_ABI) {
+    contractAbi = defaultPaymentGatewayAbi;
+  } else {
+    const parsedAbi = JSON.parse(process.env.CONTRACT_ABI);
+    contractAbi = Array.isArray(parsedAbi) && parsedAbi.length > 0 ? parsedAbi : defaultPaymentGatewayAbi;
+  }
 } catch (error) {
   contractAbi = defaultPaymentGatewayAbi;
 }
