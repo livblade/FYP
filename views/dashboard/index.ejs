@@ -15,6 +15,9 @@
     <a href="/invoices" class="btn btn-outline-light btn-sm">View All Invoices</a>
     <a href="/settlements" class="btn btn-outline-light btn-sm">View Settlements</a>
     <a href="/merchants/profile" class="btn btn-outline-light btn-sm">Profile Settings</a>
+    <% if (user && user.role === 'ADMIN') { %>
+      <a href="/audits" class="btn btn-outline-warning btn-sm">View Audit Logs</a>
+    <% } %>
   </div>
 
   <div class="card mt-4 shadow-sm">

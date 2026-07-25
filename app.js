@@ -19,6 +19,7 @@ const webhookRoutes = require('./routes/webhookRoutes');
 const settlementRoutes = require('./routes/settlementRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const auditRoutes = require('./routes/auditRoutes');
 const checkoutController = require('./controllers/checkoutController');
 
 const app = express();
@@ -53,6 +54,7 @@ app.use('/', webhookRoutes);
 app.use('/settlements', settlementRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/notifications', notificationRoutes);
+app.use('/audits', auditRoutes);
 
 app.get('/', (req, res) => {
   if (req.session && req.session.user) {

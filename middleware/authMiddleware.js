@@ -29,8 +29,18 @@ function verifyInternalApiKey(req, res, next) {
   return next();
 }
 
+function requireAdminRole(req, res, next) {
+  if (req.session?.user?.role !== 'ADMIN') {
+    // A real app might render a 403 page.
+    // For simplicity, we send a plain text response.
+    return res.status(403).send('Forbidden: Administrator access required.');
+  }
+  return next();
+}
+
 module.exports = {
   requireAuth,
   requireGuest,
-  verifyInternalApiKey
+  verifyInternalApiKey,
+  requireAdminRole
 };
