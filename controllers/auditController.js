@@ -21,7 +21,7 @@ async function renderList(req, res, next) {
       include: [{
         model: User,
         attributes: ['name', 'email'],
-        required: false // Use a LEFT JOIN to include logs with no user
+        required: false
       }],
       order: [['created_at', 'DESC']],
       limit,

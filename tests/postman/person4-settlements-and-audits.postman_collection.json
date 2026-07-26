@@ -1,0 +1,137 @@
+{
+  "info": {
+    "name": "CryptoPay Platform - Person 4",
+    "description": "Person 4 settlement, audit, and internal verification endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "List Settlements for Merchant",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/settlements/api",
+          "host": ["http://localhost:3000"],
+          "path": ["settlements", "api"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Settlement Detail",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/settlements/api/SIM-SGD-12345",
+          "host": ["http://localhost:3000"],
+          "path": ["settlements", "api", "SIM-SGD-12345"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Settlement",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"payment_id\": 123\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/settlements",
+          "host": ["http://localhost:3000"],
+          "path": ["settlements"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Settlement Status",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"COMPLETED\",\n  \"failure_reason\": null\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/settlements/SIM-SGD-12345/status",
+          "host": ["http://localhost:3000"],
+          "path": ["settlements", "SIM-SGD-12345", "status"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Reconcile Settlements",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/settlements/api/reconcile",
+          "host": ["http://localhost:3000"],
+          "path": ["settlements", "api", "reconcile"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Trigger Payment Verification",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{INTERNAL_API_KEY}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transaction_hash\": \"0x\\\"\",\n  \"invoice_public_id\": \"INV-123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/internal/payments/verify",
+          "host": ["http://localhost:3000"],
+          "path": ["internal", "payments", "verify"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Audit Log Review",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/audits",
+          "host": ["http://localhost:3000"],
+          "path": ["audits"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "INTERNAL_API_KEY",
+      "value": "replace-with-your-actual-key"
+    }
+  ]
+}

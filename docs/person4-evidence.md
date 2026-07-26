@@ -39,13 +39,20 @@ To test this:
 
 You need to prove that the communication happened.
 
-1.  **Application Log Screenshot**:
+1.  **Application Log Evidence**:
     *   After a payment is confirmed, look for a log message in your application's console similar to this:
     *   `info: Settlement workflow triggered {"payment_id":123,"mode":"n8n-webhook"}`
-    *   Take a screenshot of this log message. This proves the application *sent* the data.
-2.  **n8n Execution Log Screenshot**:
+    *   Save or screenshot this line. This proves the application *sent* the data.
+2.  **n8n Execution Evidence**:
     *   In your n8n instance, go to `Executions`.
     *   You should see a new successful execution for your settlement workflow.
-    *   Click on it and take a screenshot showing the data received by the Webhook node. This proves n8n *received* the correct data.
+    *   Open it and capture the webhook payload. This proves n8n *received* the correct data.
 
 Combine these two screenshots as your evidence for this task.
+
+## 5. Completion Checklist
+
+- [x] Settlement endpoints exist and respond as documented.
+- [x] Audit log review page is available at `/audits` for admins.
+- [x] A Postman collection export is saved in `tests/postman/person4-settlements-and-audits.postman_collection.json`.
+- [ ] Live n8n workflow evidence captured from a real run if you want the strongest proof.

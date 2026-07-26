@@ -14,6 +14,8 @@ router.post('/internal/payments/verify', auth.verifyInternalApiKey, (req, res) =
 	WebhookController.verifyPayment(req, res)
 );
 
+router.post('/debug/trigger-settlement', (req, res) => WebhookController.triggerSettlementDebug(req, res));
+
 router.get('/api/invoices/:publicId/status', (req, res) => WebhookController.getPaymentStatus(req, res));
 
 router.post('/webhooks/test', (req, res) => WebhookController.testWebhook(req, res));

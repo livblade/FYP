@@ -2,10 +2,26 @@
 const axios = require('axios');
 const settlementService = require('./settlementService');
 
+const DEFAULT_LOCAL_WEBHOOK_URL = 'http://localhost:5678/webhook/settlement-reconciliation';
+
+function buildWebhookUrl() {
+  const configured = process.env.N8N_WEBHOOK_URL || '';
+  if (configured) {
+    return configured;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return '';
+  }
+
+  return DEFAULT_LOCAL_WEBHOOK_URL;
+}
+
 async function triggerWorkflow({ type, payload }) {
   const baseUrl = process.env.N8N_BASE_URL || '';
   const webhookPath = process.env.N8N_SETTLEMENT_WEBHOOK_PATH || '';
-  const webhookUrl = process.env.N8N_WEBHOOK_URL || (baseUrl && webhookPath ? `${baseUrl.replace(/\/$/, '')}/${webhookPath.replace(/^\//, '')}` : '');
+  const explicitUrl = process.env.N8N_WEBHOOK_URL || '';
+  const webhookUrl = explicitUrl || (baseUrl && webhookPath ? `${baseUrl.replace(/\/$/, '')}/${webhookPath.replace(/^\//, '')}` : buildWebhookUrl());
 
   if (!webhookUrl) {
     if (type === 'settlement' && payload?.payment_id) {
@@ -34,7 +50,7 @@ async function triggerWorkflow({ type, payload }) {
   const response = await axios.post(webhookUrl, payload, {
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': process.env.N8N_API_KEY || ''
+      'x-api-key': process.env.N8N_API_KEY || 'local-mock-key'
     },
     timeout: 10000
   });

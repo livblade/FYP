@@ -1,0 +1,54 @@
+<!-- Person 4: Responsible for audit log review UI. -->
+<%- include('../partials/header', { title: title }) %>
+<%- include('../partials/navbar') %>
+
+<main class="container-fluid py-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h1 class="h4 mb-1">Audit Logs</h1>
+          <p class="text-muted mb-0">Review settlement and payment actions recorded by the platform.</p>
+        </div>
+      </div>
+
+      <% if (!logs || logs.length === 0) { %>
+        <div class="alert alert-info mb-0">No audit entries have been recorded yet.</div>
+      <% } else { %>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Created</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>User</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% (logs || []).forEach((log) => { %>
+                <tr>
+                  <td><%= new Date(log.created_at).toLocaleString() %></td>
+                  <td><span class="badge text-bg-primary"><%= log.action %></span></td>
+                  <td><%= log.entity_type %> / <%= log.entity_id %></td>
+                  <td><%= log.user ? (log.user.name || log.user.email) : 'System' %></td>
+                  <td>
+                    <% const metadata = log.metadata || {}; %>
+                    <% if (Object.keys(metadata).length > 0) { %>
+                      <code class="small"><%= JSON.stringify(metadata) %></code>
+                    <% } else { %>
+                      <span class="text-muted">No metadata</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

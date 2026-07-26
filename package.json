@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
+    "mock:n8n": "node scripts/mockN8nServer.js",
     "db:apply-prompt-schema": "node scripts/applyPromptSchema.js",
     "db:verify": "node scripts/verifyDatabase.js",
     "test:integration": "mocha tests/integration/**/*.test.js",

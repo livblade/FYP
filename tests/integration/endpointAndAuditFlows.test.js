@@ -8,6 +8,7 @@ const { DataTypes, Op } = require('sequelize');
 const dashboardRoutes = require('../../routes/dashboardRoutes');
 const settlementRoutes = require('../../routes/settlementRoutes');
 const paymentRoutes = require('../../routes/paymentRoutes');
+const auditRoutes = require('../../routes/auditRoutes');
 const { sequelize, connectDatabase } = require('../../config/database');
 const defineUser = require('../../models/User');
 const defineMerchant = require('../../models/Merchant');
@@ -39,6 +40,7 @@ function createTestApp() {
   app.use('/dashboard', dashboardRoutes);
   app.use('/settlements', settlementRoutes);
   app.use('/api/payments', paymentRoutes);
+  app.use('/audits', auditRoutes);
 
   app.use((error, req, res, next) => {
     return res.status(500).json({ success: false, message: error.message });
@@ -247,6 +249,55 @@ describe('Integration: Dashboard and Settlement APIs + Audit Flows', () => {
     expect(response.status).to.equal(200);
     expect(response.body.success).to.equal(true);
     expect(response.body.data.settlement_reference).to.equal(target.settlement_reference);
+  });
+
+  it('GET /settlements/api/reconcile returns a settlement summary', async () => {
+    const response = await request(app).get('/settlements/api/reconcile');
+
+    expect(response.status).to.equal(200);
+    expect(response.body.success).to.equal(true);
+    expect(response.body.data).to.have.property('summary');
+    expect(response.body.data.summary).to.have.property('total', 1);
+    expect(Array.isArray(response.body.data.settlements)).to.equal(true);
+  });
+
+  it('GET /audits returns the audit log review page for admins', async () => {
+    const adminUser = await User.create({
+      name: `Admin ${randomId('a')}`,
+      email: `admin-${randomId('a')}@example.com`,
+      password_hash: 'hashed-test-password',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      email_verified: true
+    });
+
+    await AuditLog.create({
+      user_id: adminUser.user_id,
+      action: 'SETTLEMENT_CREATED',
+      entity_type: 'settlement',
+      entity_id: String(scope.settlements[0].settlement_id),
+      metadata: { source: 'integration-test' }
+    });
+
+    sessionUser = {
+      user_id: adminUser.user_id,
+      role: 'ADMIN',
+      email: adminUser.email
+    };
+
+    const response = await request(app).get('/audits');
+
+    expect(response.status).to.equal(200);
+    expect(response.text).to.include('Audit Logs');
+    expect(response.text).to.include('SETTLEMENT_CREATED');
+
+    await AuditLog.destroy({ where: { user_id: adminUser.user_id } });
+    await User.destroy({ where: { user_id: adminUser.user_id } });
+    sessionUser = {
+      user_id: scope.user.user_id,
+      role: 'MERCHANT',
+      email: scope.user.email
+    };
   });
 
   it('POST /api/payments/submit writes PAYMENT_SUBMITTED audit log', async () => {

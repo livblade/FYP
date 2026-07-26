@@ -172,6 +172,26 @@ class WebhookController {
     }
   }
 
+  async triggerSettlementDebug(req, res) {
+    try {
+      const payload = {
+        payment_id: Number(req.body?.payment_id || req.query?.payment_id || 0),
+        invoice_public_id: req.body?.invoice_public_id || req.query?.invoice_public_id || 'INV-DEBUG',
+        transaction_hash: req.body?.transaction_hash || req.query?.transaction_hash || '0x' + '1'.repeat(64),
+        crypto_amount: req.body?.crypto_amount || req.query?.crypto_amount || '0.010000000000000000',
+        amount_sgd: req.body?.amount_sgd || req.query?.amount_sgd || '10',
+        merchant_id: req.body?.merchant_id || req.query?.merchant_id || 1,
+        timestamp: new Date().toISOString()
+      };
+
+      const result = await n8nService.triggerWorkflow({ type: 'settlement', payload });
+      return res.status(200).json(result);
+    } catch (error) {
+      logger.error('Debug settlement webhook trigger failed', { error: error.message });
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
   async verifyPayment(req, res) {
     try {
       const { transaction_hash: transactionHash, invoice_public_id: invoicePublicId } = req.body || {};

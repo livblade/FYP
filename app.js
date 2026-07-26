@@ -69,13 +69,31 @@ app.use(errorHandler);
 const PORT = Number(process.env.PORT || 3000);
 
 async function startServer() {
-  await connectDatabase();
+  try {
+    await connectDatabase();
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'development') {
+      throw error;
+    }
+
+    console.warn('Database connection failed in development mode; continuing without DB-backed routes.', error.message);
+  }
+
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
+
+  return app;
 }
 
-startServer().catch((error) => {
-  console.error('Failed to start application:', error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error('Failed to start application:', error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  app,
+  startServer
+};
