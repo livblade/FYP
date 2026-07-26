@@ -1,6 +1,82 @@
 {
-  "owner": "Person 4",
-  "purpose": "Quotation workflow placeholder",
-  "nodes": [],
-  "connections": {}
+  "name": "Person 3 - Quotation Workflow",
+  "owner": "Person 3",
+  "purpose": "Generate a simple SGD to ETH quote payload for checkout orchestration.",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "quotation-workflow",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "Webhook_Quotation",
+      "name": "Webhook - Quotation",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst amountSgd = Number(body.amount_sgd || body.amountSgd || 0);\nconst invoicePublicId = String(body.invoice_public_id || body.invoicePublicId || '');\n\nif (!invoicePublicId || !Number.isFinite(amountSgd) || amountSgd <= 0) {\n  return [{\n    json: {\n      success: false,\n      error: 'invoice_public_id and a positive amount_sgd are required'\n    }\n  }];\n}\n\nconst fallbackRate = Number($env.QUOTE_SGD_PER_ETH || 4800);\nconst quoteBufferPct = Number($env.QUOTE_BUFFER_PCT || 0.75);\nconst effectiveRate = fallbackRate * (1 + quoteBufferPct / 100);\nconst requiredCrypto = amountSgd / effectiveRate;\n\nreturn [{\n  json: {\n    success: true,\n    invoice_public_id: invoicePublicId,\n    amount_sgd: Number(amountSgd.toFixed(2)),\n    sgd_per_eth_rate: Number(effectiveRate.toFixed(6)),\n    required_crypto_amount: requiredCrypto.toFixed(18),\n    quote_source: 'n8n-local-quote',\n    quote_buffer_pct: quoteBufferPct,\n    expires_in_seconds: 300,\n    quoted_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "Code_Build_Quote",
+      "name": "Build Quote",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.success ? 200 : 400 }}"
+        }
+      },
+      "id": "Respond_Quotation",
+      "name": "Respond Quotation",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        800,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook - Quotation": {
+      "main": [
+        [
+          {
+            "node": "Build Quote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Quote": {
+      "main": [
+        [
+          {
+            "node": "Respond Quotation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "versionId": "person3-quotation-workflow-v1"
 }

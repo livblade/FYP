@@ -1,6 +1,208 @@
 {
-  "owner": "Person 4",
-  "purpose": "Payment verification workflow placeholder",
-  "nodes": [],
-  "connections": {}
+  "name": "Person 3 - Payment Verification Workflow",
+  "owner": "Person 3",
+  "purpose": "Validate verification payload and invoke the internal payment verification endpoint.",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "payment-verification-workflow",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "Webhook_Verification",
+      "name": "Webhook - Payment Verification",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        180,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst tx = String(body.transaction_hash || '').trim().toLowerCase();\nconst invoicePublicId = String(body.invoice_public_id || '').trim();\nconst txPattern = /^0x[a-f0-9]{64}$/;\n\nif (!txPattern.test(tx) || !invoicePublicId) {\n  return [{\n    json: {\n      valid: false,\n      error: 'transaction_hash and invoice_public_id are required and must be valid'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    payload: {\n      transaction_hash: tx,\n      invoice_public_id: invoicePublicId\n    }\n  }\n}];"
+      },
+      "id": "Code_Validate_Verification_Input",
+      "name": "Validate Verification Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.valid}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "IF_Verification_Input_Valid",
+      "name": "Verification Input Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        700,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.EXPRESS_BASE_URL || 'http://localhost:3000'}}/internal/payments/verify",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "={{$env.INTERNAL_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.payload}}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "HTTP_Call_Internal_Verify",
+      "name": "Call Internal Verify API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        960,
+        200
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $json;\n\nif (response.error || response.statusCode >= 400) {\n  return [{\n    json: {\n      success: false,\n      source: 'payment-verification-workflow',\n      error: response.error || response.message || 'Verification request failed',\n      raw: response\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    success: true,\n    source: 'payment-verification-workflow',\n    verification: response\n  }\n}];"
+      },
+      "id": "Code_Normalize_Verification_Result",
+      "name": "Normalize Verification Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1210,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {
+          "responseCode": "={{ $json.success ? 200 : 502 }}"
+        }
+      },
+      "id": "Respond_Verification_Result",
+      "name": "Respond Verification Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1470,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, source: 'payment-verification-workflow', error: $json.error } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "Respond_Invalid_Verification_Input",
+      "name": "Respond Invalid Verification Input",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        980,
+        460
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook - Payment Verification": {
+      "main": [
+        [
+          {
+            "node": "Validate Verification Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Verification Input": {
+      "main": [
+        [
+          {
+            "node": "Verification Input Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verification Input Valid?": {
+      "main": [
+        [
+          {
+            "node": "Call Internal Verify API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid Verification Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Internal Verify API": {
+      "main": [
+        [
+          {
+            "node": "Normalize Verification Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Verification Result": {
+      "main": [
+        [
+          {
+            "node": "Respond Verification Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 120
+  },
+  "active": false,
+  "versionId": "person3-payment-verification-workflow-v1"
 }
