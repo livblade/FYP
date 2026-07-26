@@ -65,19 +65,20 @@ Key variables are listed in `.env.example`:
 
 ## Smart Contract Deployment
 
-1. Move into blockchain folder:
+1. Configure Sepolia RPC, a rotated testnet deployer key, and treasury address in `.env`.
+2. Deploy to Sepolia:
 
 ```bash
-cd blockchain
+npm run deploy:sepolia
 ```
 
-2. Install blockchain dependencies (if managed separately).
-3. Configure deployer private key and RPC in `.env`.
-4. Deploy to Sepolia:
+3. Generate and set the real ABI:
 
 ```bash
-npx hardhat run scripts/deploy.js --network sepolia
+npm run abi:payment-gateway
 ```
+
+4. Copy `CONTRACT_ADDRESS` and `CONTRACT_ABI` into `.env`. See `docs/person2-merchant-wallet-blockchain-evidence.md` for the evidence checklist.
 
 ## n8n Workflow Import
 

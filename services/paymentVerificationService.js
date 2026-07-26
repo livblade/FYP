@@ -5,7 +5,7 @@ const { sequelize } = require('../config/database');
 const definePayment = require('../models/Payment');
 const defineInvoice = require('../models/Invoice');
 const { PAYMENT_STATUS, INVOICE_STATUS } = require('../config/constants');
-const { defaultPaymentGatewayAbi } = require('../config/blockchain');
+const { parseContractAbi } = require('../config/blockchain');
 const auditLogService = require('./auditLogService');
 const logger = require('../utils/logger');
 
@@ -35,19 +35,11 @@ class PaymentVerificationService {
   }
 
   parseContractAbi(abiValue) {
-    if (!abiValue) {
-      return defaultPaymentGatewayAbi;
+    const parsed = parseContractAbi(abiValue);
+    if (parsed.warning) {
+      logger.warn(parsed.warning);
     }
-    if (Array.isArray(abiValue)) {
-      return abiValue.length > 0 ? abiValue : defaultPaymentGatewayAbi;
-    }
-    try {
-      const parsed = JSON.parse(abiValue);
-      return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultPaymentGatewayAbi;
-    } catch (error) {
-      logger.warn('Unable to parse CONTRACT_ABI from environment');
-      return defaultPaymentGatewayAbi;
-    }
+    return parsed.abi;
   }
 
   initContract(abi) {

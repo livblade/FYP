@@ -34,7 +34,6 @@ module.exports = {
     await queryInterface.addIndex('webhook_events', ['provider'], { name: 'idx_provider' });
     await queryInterface.addIndex('webhook_events', ['processing_status'], { name: 'idx_status' });
     await queryInterface.addIndex('webhook_events', ['external_event_id'], { name: 'idx_external' });
-    await queryInterface.addIndex('webhook_events', ['payload_hash'], { name: 'idx_payload' });
   },
 
   async down(queryInterface) {

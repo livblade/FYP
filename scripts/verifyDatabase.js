@@ -27,6 +27,10 @@ const EXPECTED_FOREIGN_KEYS = [
 async function verifyDatabase() {
   try {
     const dbName = process.env.DB_NAME;
+    if (!dbName) {
+      throw new Error('DB_NAME is not set. Copy .env.example to .env and configure database credentials before running db:verify.');
+    }
+
     console.log('VERIFYING DATABASE SCHEMA FOR:', dbName);
 
     const [tables] = await sequelize.query(

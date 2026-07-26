@@ -51,7 +51,7 @@ npm run test:verification
 Wait for propagation and confirm the hash is on Sepolia.
 
 2. Event not parsed
-Set CONTRACT_ABI with PaymentAccepted event and validate contract address.
+Run `npm run abi:payment-gateway`, copy the generated `CONTRACT_ABI` into `.env`, and validate `CONTRACT_ADDRESS`.
 
 3. Webhook signature mismatch
 Confirm ALCHEMY_WEBHOOK_SECRET matches your Alchemy webhook configuration.

@@ -4,6 +4,7 @@ const {
   provider,
   contractAddress,
   contractAbi,
+  contractAbiSource,
   sepoliaChainId,
   sepoliaChainIdHex,
   isConfiguredContractAddress
@@ -29,6 +30,7 @@ function getCheckoutConfig(invoice) {
     chainIdHex: sepoliaChainIdHex,
     invoiceHash: invoice.contract_invoice_hash || computeInvoiceHash(invoice.public_id),
     explorerBaseUrl: process.env.SEPOLIA_EXPLORER_BASE_URL || 'https://sepolia.etherscan.io',
+    contractAbiSource,
     isContractConfigured: isConfiguredContractAddress(contractAddress)
   };
 }
