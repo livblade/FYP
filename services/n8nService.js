@@ -5,9 +5,15 @@ const settlementService = require('./settlementService');
 const DEFAULT_LOCAL_WEBHOOK_URL = 'http://localhost:5678/webhook/settlement-reconciliation';
 
 function buildWebhookUrl() {
-  const configured = process.env.N8N_WEBHOOK_URL || '';
-  if (configured) {
-    return configured;
+  const testUrl = process.env.N8N_WEBHOOK_TEST_URL || '';
+  const productionUrl = process.env.N8N_WEBHOOK_URL || '';
+
+  if (process.env.NODE_ENV !== 'production' && testUrl) {
+    return testUrl;
+  }
+
+  if (productionUrl) {
+    return productionUrl;
   }
 
   if (process.env.NODE_ENV === 'production') {
@@ -20,8 +26,7 @@ function buildWebhookUrl() {
 async function triggerWorkflow({ type, payload }) {
   const baseUrl = process.env.N8N_BASE_URL || '';
   const webhookPath = process.env.N8N_SETTLEMENT_WEBHOOK_PATH || '';
-  const explicitUrl = process.env.N8N_WEBHOOK_URL || '';
-  const webhookUrl = explicitUrl || (baseUrl && webhookPath ? `${baseUrl.replace(/\/$/, '')}/${webhookPath.replace(/^\//, '')}` : buildWebhookUrl());
+  const webhookUrl = baseUrl && webhookPath ? `${baseUrl.replace(/\/$/, '')}/${webhookPath.replace(/^\//, '')}` : buildWebhookUrl();
 
   if (!webhookUrl) {
     if (type === 'settlement' && payload?.payment_id) {
