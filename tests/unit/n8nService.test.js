@@ -5,12 +5,15 @@ const n8nService = require('../../services/n8nService');
 describe('n8nService local webhook integration', () => {
   const originalAxiosPost = axios.post;
 
-  afterEach(() => {
-    axios.post = originalAxiosPost;
+  beforeEach(() => {
     delete process.env.N8N_WEBHOOK_URL;
     delete process.env.N8N_WEBHOOK_TEST_URL;
     delete process.env.N8N_API_KEY;
     process.env.NODE_ENV = 'development';
+  });
+
+  afterEach(() => {
+    axios.post = originalAxiosPost;
   });
 
   it('posts settlement payloads to the local mock webhook in development', async () => {
