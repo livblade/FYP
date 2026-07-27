@@ -10,6 +10,7 @@ const dashboardRoutes = require('../../routes/dashboardRoutes');
 const settlementRoutes = require('../../routes/settlementRoutes');
 const paymentRoutes = require('../../routes/paymentRoutes');
 const auditRoutes = require('../../routes/auditRoutes');
+const notificationRoutes = require('../../routes/notificationRoutes');
 const { sequelize, connectDatabase } = require('../../config/database');
 const defineUser = require('../../models/User');
 const defineMerchant = require('../../models/Merchant');
@@ -44,6 +45,7 @@ function createTestApp() {
   app.use('/settlements', settlementRoutes);
   app.use('/api/payments', paymentRoutes);
   app.use('/audits', auditRoutes);
+  app.use('/notifications', notificationRoutes);
 
   app.use((error, req, res, next) => {
     return res.status(500).json({ success: false, message: error.message });
@@ -62,7 +64,9 @@ function txHash(seed) {
   return `0x${clean.padEnd(64, 'a').slice(0, 64)}`;
 }
 
-describe('Integration: Dashboard and Settlement APIs + Audit Flows', () => {
+describe('Integration: Dashboard and Settlement APIs + Audit Flows', function () {
+  this.timeout(30000);
+
   const app = createTestApp();
   const scope = {
     user: null,
@@ -279,6 +283,17 @@ describe('Integration: Dashboard and Settlement APIs + Audit Flows', () => {
     expect(response.text).to.not.include('>Reconcile<');
   });
 
+  it('GET /notifications/recent returns merchant payment and settlement notifications', async () => {
+    const response = await request(app).get('/notifications/recent');
+
+    expect(response.status).to.equal(200);
+    expect(response.body.success).to.equal(true);
+    expect(Array.isArray(response.body.data)).to.equal(true);
+    expect(response.body.data.some((item) => item.type === 'payment')).to.equal(true);
+    expect(response.body.data.some((item) => item.type === 'settlement')).to.equal(true);
+    expect(response.body.data.every((item) => item.href)).to.equal(true);
+  });
+
   it('GET /audits returns the audit log review page for admins', async () => {
     const adminUser = await User.create({
       name: `Admin ${randomId('a')}`,
@@ -308,6 +323,46 @@ describe('Integration: Dashboard and Settlement APIs + Audit Flows', () => {
     expect(response.status).to.equal(200);
     expect(response.text).to.include('Audit Logs');
     expect(response.text).to.include('SETTLEMENT_CREATED');
+
+    await AuditLog.destroy({ where: { user_id: adminUser.user_id } });
+    await User.destroy({ where: { user_id: adminUser.user_id } });
+    sessionUser = {
+      user_id: scope.user.user_id,
+      role: 'MERCHANT',
+      email: scope.user.email
+    };
+  });
+
+  it('GET /notifications/recent returns admin audit notifications', async () => {
+    const adminUser = await User.create({
+      name: `Admin ${randomId('a')}`,
+      email: `admin-${randomId('a')}@example.com`,
+      password_hash: 'hashed-test-password',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      email_verified: true
+    });
+
+    await AuditLog.create({
+      user_id: adminUser.user_id,
+      action: 'SETTLEMENT_CREATED',
+      entity_type: 'settlement',
+      entity_id: String(scope.settlements[0].settlement_id),
+      metadata: { source: 'notification-test' }
+    });
+
+    sessionUser = {
+      user_id: adminUser.user_id,
+      role: 'ADMIN',
+      email: adminUser.email
+    };
+
+    const response = await request(app).get('/notifications/recent');
+
+    expect(response.status).to.equal(200);
+    expect(response.body.success).to.equal(true);
+    expect(response.body.data.some((item) => item.type === 'audit')).to.equal(true);
+    expect(response.body.data.some((item) => item.href === '/audits')).to.equal(true);
 
     await AuditLog.destroy({ where: { user_id: adminUser.user_id } });
     await User.destroy({ where: { user_id: adminUser.user_id } });

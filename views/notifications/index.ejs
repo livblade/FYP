@@ -11,15 +11,16 @@
         <% } %>
 
         <% (notifications || []).forEach((item) => { %>
-          <div class="list-group-item d-flex justify-content-between align-items-start">
+          <a href="<%= item.href || '#' %>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
             <div>
               <div class="fw-semibold"><%= item.title %></div>
               <div class="text-muted"><%= item.message %></div>
+              <small class="text-muted"><%= new Date(item.created_at).toLocaleString() %></small>
             </div>
             <span class="badge bg-<%= item.level === 'success' ? 'success' : item.level === 'warning' ? 'warning text-dark' : 'secondary' %>">
               <%= item.type %>
             </span>
-          </div>
+          </a>
         <% }) %>
       </div>
     </div>

@@ -83,16 +83,48 @@ async function hydrateRecentNotifications() {
     const notifications = payload.success ? payload.data || [] : [];
     count.textContent = String(notifications.length);
 
-    const items = notifications
-      .slice(0, 5)
-      .map((item) => {
-        return `<li><span class="dropdown-item-text"><strong>${item.title}</strong><br /><small class="text-muted">${item.message}</small></span></li>`;
-      })
-      .join('');
+    dropdown.replaceChildren();
 
-    dropdown.innerHTML = notifications.length
-      ? `${items}<li><hr class="dropdown-divider" /></li><li><a class="dropdown-item" href="/notifications">View All</a></li>`
-      : '<li><span class="dropdown-item-text text-muted">No recent notifications</span></li><li><hr class="dropdown-divider" /></li><li><a class="dropdown-item" href="/notifications">View All</a></li>';
+    if (notifications.length) {
+      notifications.slice(0, 5).forEach((item) => {
+        const row = document.createElement('li');
+        const link = document.createElement('a');
+        link.className = 'dropdown-item';
+        link.href = item.href || '/notifications';
+
+        const title = document.createElement('strong');
+        title.textContent = item.title || 'Notification';
+
+        const message = document.createElement('small');
+        message.className = 'text-muted d-block';
+        message.textContent = item.message || '';
+
+        link.append(title, message);
+        row.appendChild(link);
+        dropdown.appendChild(row);
+      });
+    } else {
+      const row = document.createElement('li');
+      const empty = document.createElement('span');
+      empty.className = 'dropdown-item-text text-muted';
+      empty.textContent = 'No recent notifications';
+      row.appendChild(empty);
+      dropdown.appendChild(row);
+    }
+
+    const dividerRow = document.createElement('li');
+    const divider = document.createElement('hr');
+    divider.className = 'dropdown-divider';
+    dividerRow.appendChild(divider);
+
+    const viewAllRow = document.createElement('li');
+    const viewAllLink = document.createElement('a');
+    viewAllLink.className = 'dropdown-item';
+    viewAllLink.href = '/notifications';
+    viewAllLink.textContent = 'View All';
+    viewAllRow.appendChild(viewAllLink);
+
+    dropdown.append(dividerRow, viewAllRow);
   } catch (error) {
     // Ignore navbar notification fetch failures.
   }
