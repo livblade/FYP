@@ -2,16 +2,16 @@
 const express = require('express');
 const settlementController = require('../controllers/settlementController');
 const { requireAuth } = require('../middleware/authMiddleware');
-const { requireMerchantRole } = require('../middleware/merchantMiddleware');
+const { requireSettlementManagerRole } = require('../middleware/merchantMiddleware');
 
 const router = express.Router();
 
-router.get('/', requireAuth, requireMerchantRole, settlementController.renderList);
-router.get('/api', requireAuth, requireMerchantRole, settlementController.listSettlementsApi);
-router.get('/api/reconcile', requireAuth, requireMerchantRole, settlementController.reconcileSettlements);
-router.get('/api/:publicId', requireAuth, requireMerchantRole, settlementController.getSettlementDetailApi);
-router.get('/:publicId', requireAuth, requireMerchantRole, settlementController.renderDetail);
-router.post('/', requireAuth, requireMerchantRole, settlementController.createSettlement);
-router.post('/:publicId/status', requireAuth, requireMerchantRole, settlementController.updateSettlementStatus);
+router.get('/', requireAuth, requireSettlementManagerRole, settlementController.renderList);
+router.get('/api', requireAuth, requireSettlementManagerRole, settlementController.listSettlementsApi);
+router.get('/api/reconcile', requireAuth, requireSettlementManagerRole, settlementController.reconcileSettlements);
+router.get('/api/:publicId', requireAuth, requireSettlementManagerRole, settlementController.getSettlementDetailApi);
+router.get('/:publicId', requireAuth, requireSettlementManagerRole, settlementController.renderDetail);
+router.post('/', requireAuth, requireSettlementManagerRole, settlementController.createSettlement);
+router.post('/:publicId/status', requireAuth, requireSettlementManagerRole, settlementController.updateSettlementStatus);
 
 module.exports = router;

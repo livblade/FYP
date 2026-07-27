@@ -303,6 +303,60 @@ describe('Integration: Dashboard and Settlement APIs + Audit Flows', () => {
     };
   });
 
+  it('allows admins to list and update settlements without a merchant profile', async () => {
+    const adminUser = await User.create({
+      name: `Admin ${randomId('a')}`,
+      email: `admin-${randomId('a')}@example.com`,
+      password_hash: 'hashed-test-password',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      email_verified: true
+    });
+
+    sessionUser = {
+      user_id: adminUser.user_id,
+      role: 'ADMIN',
+      email: adminUser.email
+    };
+
+    const listResponse = await request(app).get('/settlements/api');
+
+    expect(listResponse.status).to.equal(200);
+    expect(listResponse.body.success).to.equal(true);
+    expect(Array.isArray(listResponse.body.data)).to.equal(true);
+    expect(listResponse.body.data.some((entry) => entry.settlement_id === scope.settlements[0].settlement_id)).to.equal(true);
+
+    const updateResponse = await request(app)
+      .post(`/settlements/${scope.settlements[0].settlement_reference}/status`)
+      .set('Accept', 'application/json')
+      .send({ status: 'manual_review', failure_reason: 'Admin review required' });
+
+    expect(updateResponse.status).to.equal(200);
+    expect(updateResponse.body.success).to.equal(true);
+    expect(updateResponse.body.data.status).to.equal('MANUAL_REVIEW');
+    expect(updateResponse.body.data.failure_reason).to.equal('Admin review required');
+
+    const audit = await AuditLog.findOne({
+      where: {
+        user_id: adminUser.user_id,
+        action: 'SETTLEMENT_STATUS_UPDATED',
+        entity_type: 'settlement',
+        entity_id: String(scope.settlements[0].settlement_id)
+      },
+      order: [['audit_id', 'DESC']]
+    });
+
+    expect(audit).to.not.equal(null);
+
+    await AuditLog.destroy({ where: { user_id: adminUser.user_id } });
+    await User.destroy({ where: { user_id: adminUser.user_id } });
+    sessionUser = {
+      user_id: scope.user.user_id,
+      role: 'MERCHANT',
+      email: scope.user.email
+    };
+  });
+
   it('POST /api/payments/submit writes PAYMENT_SUBMITTED audit log', async () => {
     const invoice = await Invoice.create({
       public_id: randomId('INV-C').slice(0, 20),

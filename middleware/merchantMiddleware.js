@@ -13,6 +13,21 @@ function requireMerchantRole(req, res, next) {
   return next();
 }
 
+function requireSettlementManagerRole(req, res, next) {
+  const role = req.session && req.session.user ? req.session.user.role : null;
+  if (role !== 'MERCHANT' && role !== 'ADMIN') {
+    if (req.accepts('html')) {
+      return res.status(403).render('dashboard/index', {
+        title: 'Access Denied',
+        user: req.session.user || null
+      });
+    }
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+  return next();
+}
+
 module.exports = {
-  requireMerchantRole
+  requireMerchantRole,
+  requireSettlementManagerRole
 };

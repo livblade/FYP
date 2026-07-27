@@ -7,6 +7,7 @@ const definePayment = require('../models/Payment');
 const defineSettlement = require('../models/Settlement');
 const settlementService = require('../services/settlementService');
 const auditLogService = require('../services/auditLogService');
+const { SETTLEMENT_STATUS } = require('../config/constants');
 
 const Merchant = defineMerchant(sequelize, DataTypes);
 const Invoice = defineInvoice(sequelize, DataTypes);
@@ -21,20 +22,62 @@ async function getMerchantBySessionUser(sessionUser) {
   return Merchant.findOne({ where: { user_id: sessionUser.user_id } });
 }
 
+function isAdminUser(sessionUser) {
+  return sessionUser && sessionUser.role === 'ADMIN';
+}
+
+async function getSettlementScope(sessionUser) {
+  if (isAdminUser(sessionUser)) {
+    return {
+      isAdmin: true,
+      merchant: null,
+      where: {}
+    };
+  }
+
+  const merchant = await getMerchantBySessionUser(sessionUser);
+  if (!merchant) {
+    return null;
+  }
+
+  return {
+    isAdmin: false,
+    merchant,
+    where: { merchant_id: merchant.merchant_id }
+  };
+}
+
+async function findSettlementForSession(sessionUser, settlementReference) {
+  const scope = await getSettlementScope(sessionUser);
+  if (!scope) {
+    return null;
+  }
+
+  return Settlement.findOne({
+    where: {
+      ...scope.where,
+      settlement_reference: settlementReference
+    }
+  });
+}
+
 async function renderList(req, res, next) {
   try {
-    const merchant = await getMerchantBySessionUser(req.session.user || null);
-    const settlements = merchant
+    const sessionUser = req.session.user || null;
+    const scope = await getSettlementScope(sessionUser);
+    const settlements = scope
       ? await Settlement.findAll({
-          where: { merchant_id: merchant.merchant_id },
+          where: scope.where,
           order: [['created_at', 'DESC']]
         })
       : [];
 
     return res.render('settlements/list', {
       title: 'Settlements',
-      user: req.session.user || null,
-      settlements
+      user: sessionUser,
+      settlements,
+      isAdmin: Boolean(scope?.isAdmin),
+      statusOptions: Object.values(SETTLEMENT_STATUS)
     });
   } catch (error) {
     return next(error);
@@ -43,13 +86,13 @@ async function renderList(req, res, next) {
 
 async function listSettlementsApi(req, res, next) {
   try {
-    const merchant = await getMerchantBySessionUser(req.session.user || null);
-    if (!merchant) {
+    const scope = await getSettlementScope(req.session.user || null);
+    if (!scope) {
       return res.status(400).json({ success: false, message: 'Merchant profile not found' });
     }
 
     const settlements = await Settlement.findAll({
-      where: { merchant_id: merchant.merchant_id },
+      where: scope.where,
       order: [['created_at', 'DESC']],
       limit: 200
     });
@@ -62,30 +105,30 @@ async function listSettlementsApi(req, res, next) {
 
 async function renderDetail(req, res, next) {
   try {
-    const merchant = await getMerchantBySessionUser(req.session.user || null);
-    if (!merchant) {
+    const sessionUser = req.session.user || null;
+    const scope = await getSettlementScope(sessionUser);
+    if (!scope) {
       return res.redirect('/settlements');
     }
 
-    const settlement = await Settlement.findOne({
-      where: {
-        merchant_id: merchant.merchant_id,
-        settlement_reference: req.params.publicId
-      }
-    });
+    const settlement = await findSettlementForSession(sessionUser, req.params.publicId);
 
     if (!settlement) {
       return res.status(404).render('settlements/detail', {
         title: 'Settlement Not Found',
-        user: req.session.user || null,
-        settlement: null
+        user: sessionUser,
+        settlement: null,
+        isAdmin: Boolean(scope.isAdmin),
+        statusOptions: Object.values(SETTLEMENT_STATUS)
       });
     }
 
     return res.render('settlements/detail', {
       title: `Settlement ${settlement.settlement_reference}`,
-      user: req.session.user || null,
-      settlement
+      user: sessionUser,
+      settlement,
+      isAdmin: Boolean(scope.isAdmin),
+      statusOptions: Object.values(SETTLEMENT_STATUS)
     });
   } catch (error) {
     return next(error);
@@ -94,17 +137,12 @@ async function renderDetail(req, res, next) {
 
 async function getSettlementDetailApi(req, res, next) {
   try {
-    const merchant = await getMerchantBySessionUser(req.session.user || null);
-    if (!merchant) {
+    const scope = await getSettlementScope(req.session.user || null);
+    if (!scope) {
       return res.status(400).json({ success: false, message: 'Merchant profile not found' });
     }
 
-    const settlement = await Settlement.findOne({
-      where: {
-        merchant_id: merchant.merchant_id,
-        settlement_reference: req.params.publicId
-      }
-    });
+    const settlement = await findSettlementForSession(req.session.user || null, req.params.publicId);
 
     if (!settlement) {
       return res.status(404).json({ success: false, message: 'Settlement not found' });
@@ -118,8 +156,9 @@ async function getSettlementDetailApi(req, res, next) {
 
 async function createSettlement(req, res, next) {
   try {
-    const merchant = await getMerchantBySessionUser(req.session.user || null);
-    if (!merchant) {
+    const sessionUser = req.session.user || null;
+    const scope = await getSettlementScope(sessionUser);
+    if (!scope) {
       return res.status(400).json({ success: false, message: 'Merchant profile not found' });
     }
 
@@ -134,13 +173,17 @@ async function createSettlement(req, res, next) {
     }
 
     const invoice = await Invoice.findByPk(payment.invoice_id);
-    if (!invoice || invoice.merchant_id !== merchant.merchant_id) {
+    if (!invoice) {
+      return res.status(404).json({ success: false, message: 'Invoice not found for payment' });
+    }
+
+    if (!scope.isAdmin && invoice.merchant_id !== scope.merchant.merchant_id) {
       return res.status(403).json({ success: false, message: 'Payment does not belong to this merchant' });
     }
 
     const settlement = await settlementService.createSettlementForPayment({
       paymentId: payment.payment_id,
-      merchantId: merchant.merchant_id,
+      merchantId: scope.isAdmin ? invoice.merchant_id : scope.merchant.merchant_id,
       providerReference: req.body.provider_reference || null,
       payoutAddress: req.body.payout_address || null
     });
@@ -153,7 +196,8 @@ async function createSettlement(req, res, next) {
       entityId: settlement.settlement_id,
       newValues: settlement.get({ plain: true }),
       metadata: {
-        settlement_reference: settlement.settlement_reference
+        settlement_reference: settlement.settlement_reference,
+        managed_by_role: sessionUser ? sessionUser.role : null
       }
     });
 
@@ -169,17 +213,13 @@ async function createSettlement(req, res, next) {
 
 async function updateSettlementStatus(req, res, next) {
   try {
-    const merchant = await getMerchantBySessionUser(req.session.user || null);
-    if (!merchant) {
+    const sessionUser = req.session.user || null;
+    const scope = await getSettlementScope(sessionUser);
+    if (!scope) {
       return res.status(400).json({ success: false, message: 'Merchant profile not found' });
     }
 
-    const settlement = await Settlement.findOne({
-      where: {
-        merchant_id: merchant.merchant_id,
-        settlement_reference: req.params.publicId
-      }
-    });
+    const settlement = await findSettlementForSession(sessionUser, req.params.publicId);
 
     if (!settlement) {
       return res.status(404).json({ success: false, message: 'Settlement not found' });
@@ -201,9 +241,15 @@ async function updateSettlementStatus(req, res, next) {
       oldValues,
       newValues: updated.get({ plain: true }),
       metadata: {
-        settlement_reference: updated.settlement_reference
+        settlement_reference: updated.settlement_reference,
+        managed_by_role: sessionUser ? sessionUser.role : null
       }
     });
+
+    const acceptHeader = req.get('accept') || '';
+    if (acceptHeader.includes('text/html') && !acceptHeader.includes('application/json')) {
+      return res.redirect(`/settlements/${updated.settlement_reference}`);
+    }
 
     return res.json({ success: true, data: updated });
   } catch (error) {
@@ -213,12 +259,13 @@ async function updateSettlementStatus(req, res, next) {
 
 async function reconcileSettlements(req, res, next) {
   try {
-    const merchant = await getMerchantBySessionUser(req.session.user || null);
-    if (!merchant) {
+    const sessionUser = req.session.user || null;
+    const scope = await getSettlementScope(sessionUser);
+    if (!scope) {
       return res.status(400).json({ success: false, message: 'Merchant profile not found' });
     }
 
-    const result = await settlementService.reconcileMerchantSettlements(merchant.merchant_id);
+    const result = await settlementService.reconcileMerchantSettlements(scope.isAdmin ? null : scope.merchant.merchant_id);
     return res.json({ success: true, data: result });
   } catch (error) {
     return next(error);

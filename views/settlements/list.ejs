@@ -5,10 +5,24 @@
 <main class="container-fluid py-4">
   <div class="card shadow-sm">
     <div class="card-body">
-      <h1 class="h4">Settlements</h1>
+      <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
+        <div>
+          <h1 class="h4 mb-1"><%= isAdmin ? 'Admin Settlement Management' : 'Settlements' %></h1>
+          <% if (isAdmin) { %>
+            <p class="text-muted small mb-0">Review and manage settlements across all merchants.</p>
+          <% } %>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="/settlements/api/reconcile">Reconcile</a>
+      </div>
       <form action="/settlements" method="post" class="row g-2 mb-3">
         <div class="col-auto">
           <input class="form-control form-control-sm" type="number" name="payment_id" placeholder="Payment ID" required />
+        </div>
+        <div class="col-auto">
+          <input class="form-control form-control-sm" type="text" name="provider_reference" placeholder="Provider reference" />
+        </div>
+        <div class="col-auto">
+          <input class="form-control form-control-sm" type="text" name="payout_address" placeholder="Payout address" />
         </div>
         <div class="col-auto">
           <button class="btn btn-primary btn-sm" type="submit">Create Settlement</button>
@@ -16,14 +30,24 @@
       </form>
       <div class="table-responsive">
         <table class="table table-hover">
-          <thead><tr><th>Reference</th><th>Payment ID</th><th>Gross (SGD)</th><th>Net (SGD)</th><th>Status</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <% if (isAdmin) { %><th>Merchant ID</th><% } %>
+              <th>Payment ID</th>
+              <th>Gross (SGD)</th>
+              <th>Net (SGD)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
           <tbody>
             <% if (!settlements || settlements.length === 0) { %>
-              <tr><td colspan="5" class="text-center text-muted py-4">No settlements available.</td></tr>
+              <tr><td colspan="<%= isAdmin ? 6 : 5 %>" class="text-center text-muted py-4">No settlements available.</td></tr>
             <% } %>
             <% (settlements || []).forEach((settlement) => { %>
               <tr>
                 <td><a href="/settlements/<%= settlement.settlement_reference %>"><%= settlement.settlement_reference %></a></td>
+                <% if (isAdmin) { %><td><%= settlement.merchant_id %></td><% } %>
                 <td><%= settlement.payment_id %></td>
                 <td><%= Number(settlement.gross_amount_sgd).toFixed(2) %></td>
                 <td><%= Number(settlement.net_amount_sgd).toFixed(2) %></td>
