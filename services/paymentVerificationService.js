@@ -221,7 +221,7 @@ class PaymentVerificationService {
       );
 
       await invoice.update({ status: INVOICE_STATUS.PAID });
-      const autoSettlement = await this.autoSettleConfirmedPayment(payment, invoice);
+      const autoSettlement = await this.finalizeConfirmedPayment(payment, invoice);
       await invoice.reload();
 
       return {
@@ -392,6 +392,36 @@ class PaymentVerificationService {
     return payment;
   }
 
+  async finalizeConfirmedPayment(payment, invoice) {
+    if (!payment) {
+      return { success: false, created: false, settlement: null, error: 'Payment not provided' };
+    }
+
+    if (invoice && typeof invoice.update === 'function' && ![INVOICE_STATUS.PAID, INVOICE_STATUS.SETTLED].includes(invoice.status)) {
+      await invoice.update({ status: INVOICE_STATUS.PAID });
+    }
+
+    const autoSettlement = await this.autoSettleConfirmedPayment(payment, invoice);
+
+    if (autoSettlement.success && autoSettlement.settlement) {
+      return {
+        success: true,
+        status: PAYMENT_STATUS.CONFIRMED,
+        created: autoSettlement.created,
+        settlement: autoSettlement.settlement,
+        error: null
+      };
+    }
+
+    return {
+      success: false,
+      status: PAYMENT_STATUS.CONFIRMED,
+      created: false,
+      settlement: null,
+      error: autoSettlement.error || 'Settlement could not be created'
+    };
+  }
+
   async autoSettleConfirmedPayment(payment, invoice) {
     try {
       const existingSettlement = await Settlement.findOne({ where: { payment_id: payment.payment_id } });
@@ -467,7 +497,7 @@ class PaymentVerificationService {
       }
 
       if (invoice) {
-        await this.autoSettleConfirmedPayment(payment, invoice);
+        await this.finalizeConfirmedPayment(payment, invoice);
       }
     }
 

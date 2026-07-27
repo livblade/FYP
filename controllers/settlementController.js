@@ -266,6 +266,11 @@ async function reconcileSettlements(req, res, next) {
     }
 
     const result = await settlementService.reconcileMerchantSettlements(scope.isAdmin ? null : scope.merchant.merchant_id);
+
+    if (req.method === 'POST') {
+      return res.redirect('/settlements');
+    }
+
     return res.json({ success: true, data: result });
   } catch (error) {
     return next(error);

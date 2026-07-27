@@ -264,6 +264,13 @@ describe('Integration: Dashboard and Settlement APIs + Audit Flows', () => {
     expect(Array.isArray(response.body.data.settlements)).to.equal(true);
   });
 
+  it('POST /settlements/api/reconcile redirects admins back to the settlements page', async () => {
+    const response = await request(app).post('/settlements/api/reconcile');
+
+    expect(response.status).to.equal(302);
+    expect(response.headers.location).to.equal('/settlements');
+  });
+
   it('hides settlement reconcile action from merchants', async () => {
     const response = await request(app).get('/settlements');
 

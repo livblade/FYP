@@ -34,6 +34,24 @@ function computeSettlementBreakdown(invoiceAmount, merchant) {
   };
 }
 
+function getReconciledSettlementStatus(paymentStatus) {
+  switch (paymentStatus) {
+    case PAYMENT_STATUS.CONFIRMED:
+      return SETTLEMENT_STATUS.COMPLETED;
+    case PAYMENT_STATUS.CONFIRMING:
+    case PAYMENT_STATUS.VERIFYING:
+    case PAYMENT_STATUS.DETECTED:
+      return SETTLEMENT_STATUS.PROCESSING;
+    case PAYMENT_STATUS.REJECTED:
+    case PAYMENT_STATUS.UNDERPAID:
+    case PAYMENT_STATUS.OVERPAID:
+    case PAYMENT_STATUS.FAILED:
+      return SETTLEMENT_STATUS.MANUAL_REVIEW;
+    default:
+      return SETTLEMENT_STATUS.CREATED;
+  }
+}
+
 async function createSettlementForPayment({ paymentId, merchantId = null, payoutAddress = null, providerReference = null }) {
   const payment = await Payment.findByPk(paymentId);
   if (!payment) {
@@ -116,7 +134,14 @@ async function reconcileMerchantSettlements(merchantId) {
   };
 
   for (const settlement of settlements) {
-    switch (settlement.status) {
+    const payment = settlement.payment_id ? await Payment.findByPk(settlement.payment_id) : null;
+    const nextStatus = payment ? getReconciledSettlementStatus(payment.status) : settlement.status;
+
+    if (nextStatus !== settlement.status) {
+      await settlement.update({ status: nextStatus });
+    }
+
+    switch (nextStatus) {
       case SETTLEMENT_STATUS.CREATED:
         summary.created += 1;
         break;
@@ -137,9 +162,11 @@ async function reconcileMerchantSettlements(merchantId) {
     }
   }
 
+  const reconciledSettlements = await Settlement.findAll({ where, order: [['created_at', 'DESC']] });
+
   return {
     summary,
-    settlements
+    settlements: reconciledSettlements
   };
 }
 
@@ -167,6 +194,7 @@ async function createSettlementBatch(paymentIds = []) {
 
 module.exports = {
   computeSettlementBreakdown,
+  getReconciledSettlementStatus,
   createSettlementForPayment,
   updateSettlementStatus,
   reconcileMerchantSettlements,

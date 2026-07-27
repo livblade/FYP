@@ -12,6 +12,7 @@ router.get('/api/reconcile', requireAuth, requireSettlementManagerRole, settleme
 router.get('/api/:publicId', requireAuth, requireSettlementManagerRole, settlementController.getSettlementDetailApi);
 router.get('/:publicId', requireAuth, requireSettlementManagerRole, settlementController.renderDetail);
 router.post('/', requireAuth, requireSettlementManagerRole, settlementController.createSettlement);
+router.post('/api/reconcile', requireAuth, requireSettlementManagerRole, settlementController.reconcileSettlements);
 router.post('/:publicId/status', requireAuth, requireSettlementManagerRole, settlementController.updateSettlementStatus);
 
 module.exports = router;
