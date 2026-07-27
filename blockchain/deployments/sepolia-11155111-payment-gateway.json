@@ -1,0 +1,10 @@
+{
+  "contract": "PaymentGateway",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "contractAddress": "0xB65Bc88674B311abF04F627798f1121D34FdC31B",
+  "treasuryAddress": "0x4ea23f9e751DFBADAD70e817ABe09E879306091e",
+  "deployerAddress": "0x4ea23f9e751DFBADAD70e817ABe09E879306091e",
+  "transactionHash": "0x4f2802845a6ec099d568c854ecf1f8398c9da9cb6d144e83fb5bef046b73f8fa",
+  "deployedAt": "2026-07-27T05:30:13.765Z"
+}
