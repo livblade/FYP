@@ -12,7 +12,9 @@
             <p class="text-muted small mb-0">Review and manage settlements across all merchants.</p>
           <% } %>
         </div>
-        <a class="btn btn-outline-secondary btn-sm" href="/settlements/api/reconcile">Reconcile</a>
+        <% if (isAdmin) { %>
+          <a class="btn btn-outline-secondary btn-sm" href="/settlements/api/reconcile">Reconcile</a>
+        <% } %>
       </div>
       <form action="/settlements" method="post" class="row g-2 mb-3">
         <div class="col-auto">

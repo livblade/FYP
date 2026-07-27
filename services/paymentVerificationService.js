@@ -97,6 +97,21 @@ class PaymentVerificationService {
         return this.createResult(false, PAYMENT_STATUS.REJECTED, 'Invoice not found');
       }
 
+      const existingPayment = await Payment.findOne({
+        where: {
+          chain_id: this.chainId,
+          transaction_hash: transactionHash
+        }
+      });
+
+      if (existingPayment && existingPayment.status === PAYMENT_STATUS.CONFIRMED) {
+        const autoSettlement = await this.autoSettleConfirmedPayment(existingPayment, invoice);
+        return this.createResult(false, PAYMENT_STATUS.DUPLICATE, 'This transaction has already been processed', {
+          payment_id: existingPayment.payment_id,
+          settlement: autoSettlement.settlement
+        });
+      }
+
       if ([INVOICE_STATUS.PAID, INVOICE_STATUS.SETTLED].includes(invoice.status)) {
         return this.createResult(false, PAYMENT_STATUS.DUPLICATE, 'Invoice already paid');
       }
@@ -159,21 +174,6 @@ class PaymentVerificationService {
             }
           );
         }
-      }
-
-      const existingPayment = await Payment.findOne({
-        where: {
-          chain_id: this.chainId,
-          transaction_hash: transactionHash
-        }
-      });
-
-      if (existingPayment && existingPayment.status === PAYMENT_STATUS.CONFIRMED) {
-        const autoSettlement = await this.autoSettleConfirmedPayment(existingPayment, invoice);
-        return this.createResult(false, PAYMENT_STATUS.DUPLICATE, 'This transaction has already been processed', {
-          payment_id: existingPayment.payment_id,
-          settlement: autoSettlement.settlement
-        });
       }
 
       const currentBlock = await this.getProvider().getBlockNumber();

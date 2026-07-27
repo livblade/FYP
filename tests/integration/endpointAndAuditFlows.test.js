@@ -264,6 +264,14 @@ describe('Integration: Dashboard and Settlement APIs + Audit Flows', () => {
     expect(Array.isArray(response.body.data.settlements)).to.equal(true);
   });
 
+  it('hides settlement reconcile action from merchants', async () => {
+    const response = await request(app).get('/settlements');
+
+    expect(response.status).to.equal(200);
+    expect(response.text).to.include('Settlements');
+    expect(response.text).to.not.include('>Reconcile<');
+  });
+
   it('GET /audits returns the audit log review page for admins', async () => {
     const adminUser = await User.create({
       name: `Admin ${randomId('a')}`,
@@ -496,6 +504,30 @@ describe('Integration: Dashboard and Settlement APIs + Audit Flows', () => {
 
     expect(audit).to.not.equal(null);
     expect(audit.metadata.source).to.equal('auto-settlement');
+  });
+
+  it('repairs missing settlement when payment status endpoint sees confirmed payment', async () => {
+    const targetPayment = scope.payments[1];
+    const targetInvoice = scope.invoices[1];
+
+    await targetPayment.update({
+      status: 'CONFIRMED',
+      confirmation_count: 3,
+      confirmed_at: new Date()
+    });
+    await targetInvoice.update({ status: 'PAID' });
+
+    const response = await request(app).get(`/api/payments/status/${targetInvoice.public_id}`);
+
+    expect(response.status).to.equal(200);
+    expect(response.body.success).to.equal(true);
+    expect(response.body.data.invoice_status).to.equal('SETTLED');
+    expect(response.body.data.payment_status).to.equal('CONFIRMED');
+    expect(response.body.data.settlement_reference).to.be.a('string');
+
+    const settlement = await Settlement.findOne({ where: { payment_id: targetPayment.payment_id } });
+    expect(settlement).to.not.equal(null);
+    scope.settlements.push(settlement);
   });
 
   it('Payment verification confirmation update writes PAYMENT_VERIFICATION_UPDATED audit log', async () => {

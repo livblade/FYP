@@ -3,6 +3,7 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 const defineInvoice = require('../models/Invoice');
 const definePayment = require('../models/Payment');
+const defineSettlement = require('../models/Settlement');
 const { INVOICE_STATUS, PAYMENT_STATUS } = require('../config/constants');
 const blockchainService = require('../services/blockchainService');
 const PaymentVerificationService = require('../services/paymentVerificationService');
@@ -10,6 +11,7 @@ const auditLogService = require('../services/auditLogService');
 
 const Invoice = defineInvoice(sequelize, DataTypes);
 const Payment = definePayment(sequelize, DataTypes);
+const Settlement = defineSettlement(sequelize, DataTypes);
 
 const ETH_TRANSACTION_HASH_PATTERN = /^0x([A-Fa-f0-9]{64})$/;
 const ETH_ADDRESS_PATTERN = /^0x([A-Fa-f0-9]{40})$/;
@@ -179,6 +181,17 @@ async function getPaymentStatus(req, res, next) {
       });
     }
 
+    if (payment && payment.status === PAYMENT_STATUS.CONFIRMED) {
+      await PaymentVerificationService.autoSettleConfirmedPayment(payment, invoice);
+      invoice = await Invoice.findOne({ where: { public_id: req.params.invoicePublicId } });
+      payment = await Payment.findOne({
+        where: { invoice_id: invoice.invoice_id },
+        order: [['created_at', 'DESC']]
+      });
+    }
+
+    const settlement = payment ? await Settlement.findOne({ where: { payment_id: payment.payment_id } }) : null;
+
     return res.json({
       success: true,
       data: {
@@ -187,7 +200,9 @@ async function getPaymentStatus(req, res, next) {
         payment_status: payment.status,
         transaction_hash: payment.transaction_hash,
         confirmations: payment.confirmation_count,
-        required_confirmations: payment.required_confirmations
+        required_confirmations: payment.required_confirmations,
+        settlement_reference: settlement ? settlement.settlement_reference : null,
+        settlement_status: settlement ? settlement.status : null
       }
     });
   } catch (error) {
