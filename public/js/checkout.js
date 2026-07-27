@@ -82,9 +82,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const paymentStatus = statusPayload.data.payment_status;
       const invoiceStatus = statusPayload.data.invoice_status;
 
-      if (paymentStatus === 'CONFIRMED' || invoiceStatus === 'PAID') {
+      if (paymentStatus === 'CONFIRMED' || ['PAID', 'SETTLED'].includes(invoiceStatus)) {
         markStep('complete');
-        setStatus('Payment confirmed on-chain.', 'success');
+        setStatus(invoiceStatus === 'SETTLED' ? 'Payment confirmed and settlement created.' : 'Payment confirmed on-chain.', 'success');
         return true;
       }
 

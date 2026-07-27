@@ -470,6 +470,34 @@ describe('Integration: Dashboard and Settlement APIs + Audit Flows', () => {
     expect(audit).to.not.equal(null);
   });
 
+  it('auto creates settlement when payment reaches required confirmations', async () => {
+    const targetPayment = scope.payments[1];
+    const targetInvoice = scope.invoices[1];
+
+    const updatedPayment = await paymentVerificationService.updatePaymentConfirmations(targetPayment.payment_id, 3);
+
+    expect(updatedPayment.status).to.equal('CONFIRMED');
+
+    const settlement = await Settlement.findOne({ where: { payment_id: targetPayment.payment_id } });
+    expect(settlement).to.not.equal(null);
+    scope.settlements.push(settlement);
+
+    const reloadedInvoice = await Invoice.findByPk(targetInvoice.invoice_id);
+    expect(reloadedInvoice.status).to.equal('SETTLED');
+
+    const audit = await AuditLog.findOne({
+      where: {
+        action: 'SETTLEMENT_CREATED',
+        entity_type: 'settlement',
+        entity_id: String(settlement.settlement_id)
+      },
+      order: [['audit_id', 'DESC']]
+    });
+
+    expect(audit).to.not.equal(null);
+    expect(audit.metadata.source).to.equal('auto-settlement');
+  });
+
   it('Payment verification confirmation update writes PAYMENT_VERIFICATION_UPDATED audit log', async () => {
     const targetPayment = scope.payments[1];
 

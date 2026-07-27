@@ -4,13 +4,16 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 const definePayment = require('../models/Payment');
 const defineInvoice = require('../models/Invoice');
+const defineSettlement = require('../models/Settlement');
 const { PAYMENT_STATUS, INVOICE_STATUS } = require('../config/constants');
 const { parseContractAbi } = require('../config/blockchain');
 const auditLogService = require('./auditLogService');
+const settlementService = require('./settlementService');
 const logger = require('../utils/logger');
 
 const Payment = definePayment(sequelize, DataTypes);
 const Invoice = defineInvoice(sequelize, DataTypes);
+const Settlement = defineSettlement(sequelize, DataTypes);
 
 const DEFAULT_CHAIN_ID = Number(process.env.SEPOLIA_CHAIN_ID || 11155111);
 const DEFAULT_MIN_CONFIRMATIONS = Number(process.env.MIN_CONFIRMATIONS || 12);
@@ -166,8 +169,10 @@ class PaymentVerificationService {
       });
 
       if (existingPayment && existingPayment.status === PAYMENT_STATUS.CONFIRMED) {
+        const autoSettlement = await this.autoSettleConfirmedPayment(existingPayment, invoice);
         return this.createResult(false, PAYMENT_STATUS.DUPLICATE, 'This transaction has already been processed', {
-          payment_id: existingPayment.payment_id
+          payment_id: existingPayment.payment_id,
+          settlement: autoSettlement.settlement
         });
       }
 
@@ -216,13 +221,19 @@ class PaymentVerificationService {
       );
 
       await invoice.update({ status: INVOICE_STATUS.PAID });
+      const autoSettlement = await this.autoSettleConfirmedPayment(payment, invoice);
+      await invoice.reload();
 
       return {
         success: true,
         status: PAYMENT_STATUS.CONFIRMED,
-        message: 'Payment successfully verified and confirmed',
+        message: autoSettlement.success
+          ? 'Payment successfully verified, confirmed, and settled'
+          : 'Payment successfully verified and confirmed; settlement requires review',
         payment: this.toJsonSafe(payment),
         invoice: this.toJsonSafe(invoice),
+        settlement: this.toJsonSafe(autoSettlement.settlement),
+        settlement_error: autoSettlement.error || null,
         eventData: this.toJsonSafe(eventData),
         confirmations,
         verificationTime: Date.now() - startTime
@@ -381,6 +392,61 @@ class PaymentVerificationService {
     return payment;
   }
 
+  async autoSettleConfirmedPayment(payment, invoice) {
+    try {
+      const existingSettlement = await Settlement.findOne({ where: { payment_id: payment.payment_id } });
+      if (existingSettlement) {
+        return {
+          success: true,
+          created: false,
+          settlement: existingSettlement.get({ plain: true })
+        };
+      }
+
+      const settlement = await settlementService.createSettlementForPayment({
+        paymentId: payment.payment_id,
+        merchantId: invoice.merchant_id,
+        providerReference: 'AUTO-SETTLEMENT'
+      });
+
+      await auditLogService.logAction({
+        action: 'SETTLEMENT_CREATED',
+        entityType: 'settlement',
+        entityId: settlement.settlement_id,
+        newValues: settlement.get({ plain: true }),
+        metadata: {
+          settlement_reference: settlement.settlement_reference,
+          payment_id: payment.payment_id,
+          invoice_public_id: invoice.public_id,
+          source: 'auto-settlement'
+        }
+      });
+
+      return {
+        success: true,
+        created: true,
+        settlement: settlement.get({ plain: true })
+      };
+    } catch (error) {
+      logger.error('Auto settlement failed', {
+        error: error.message,
+        paymentId: payment ? payment.payment_id : null,
+        invoicePublicId: invoice ? invoice.public_id : null
+      });
+
+      if (invoice && invoice.status !== INVOICE_STATUS.SETTLED) {
+        await invoice.update({ status: INVOICE_STATUS.MANUAL_REVIEW });
+      }
+
+      return {
+        success: false,
+        created: false,
+        settlement: null,
+        error: error.message
+      };
+    }
+  }
+
   async updatePaymentConfirmations(paymentId, confirmations) {
     const payment = await Payment.findByPk(paymentId);
     if (!payment) {
@@ -396,8 +462,12 @@ class PaymentVerificationService {
       });
 
       const invoice = await Invoice.findByPk(payment.invoice_id);
-      if (invoice && invoice.status !== INVOICE_STATUS.PAID) {
+      if (invoice && ![INVOICE_STATUS.PAID, INVOICE_STATUS.SETTLED].includes(invoice.status)) {
         await invoice.update({ status: INVOICE_STATUS.PAID });
+      }
+
+      if (invoice) {
+        await this.autoSettleConfirmedPayment(payment, invoice);
       }
     }
 
