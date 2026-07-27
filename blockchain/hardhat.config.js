@@ -19,7 +19,10 @@ module.exports = {
   solidity: '0.8.24',
   networks: {
     sepolia: {
-      url: process.env.ALCHEMY_RPC_URL || '',
+      url:
+        process.env.ALCHEMY_RPC_URL ||
+        process.env.SEPOLIA_RPC_URL ||
+        'https://ethereum-sepolia-rpc.publicnode.com',
       accounts: getSepoliaAccounts()
     }
   }
